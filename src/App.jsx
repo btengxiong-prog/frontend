@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const API_URL = 'https://family-tree-api-6kn7.onrender.com';
+const API_URL = 'https://family-tree-backend-0fv9.onrender.com';
 
 const formatDisplayDate = (dateStr) => {
   if (!dateStr) return 'ບໍ່ລະບຸ';
