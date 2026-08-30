@@ -26,28 +26,6 @@
 <body>
     <div id="root"></div>
 
-    <!-- Firebase SDKs ສໍາລັບ Realtime Sync ທົ່ວໂລກ -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, setDoc, doc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyDcHM2zgFajZEdP_LZhal7ioF4ZtNiXts",
-            authDomain: "posxiong-pos.firebaseapp.com",
-            projectId: "posxiong-pos",
-            storageBucket: "posxiong-pos.appspot.com",
-            messagingSenderId: "501328751337",
-            appId: "1:501328751337:web:5cb9f461c55341c5765e78",
-            measurementId: "G-G1PQJLKBG3"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        window.db = db;
-        window.FB = { collection, getDocs, setDoc, doc, deleteDoc, onSnapshot };
-        window.dispatchEvent(new Event('firebase-ready'));
-    </script>
-
     <script type="text/babel">
         const { useState, useEffect } = React;
 
@@ -199,7 +177,6 @@
           });
           const [loginForm, setLoginForm] = useState({ username: '', password: '' });
 
-          // ດຶງຂໍ້ມູນຈາກ LocalStorage ມາສະແດງທັນທີ 100% ເພື່ອຮັບປະກັນວ່າຂໍ້ມູນເກົ່າບໍ່ຫາຍ
           const [members, setMembers] = useState(() => {
               const saved = localStorage.getItem('xiong_local_members');
               return saved ? JSON.parse(saved) : [{ id: 1, first_name: 'ຕົ້ນຕະກຸນ', last_name: 'ຊົ່ງ', gender: 'Male', birth_date: '1900-01-01', village: '', district: '', province: '', photo_url: '', father_id: '', mother_id: '', spouse_id: '' }];
@@ -229,80 +206,6 @@
 
           const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', onConfirm: null, isConfirm: false });
 
-          // ລະບົບ Realtime Sync ແບບ Merge ຂໍ້ມູນເກົ່າ (ບໍ່ໃຫ້ຫາຍ)
-          useEffect(() => {
-              const initFirebaseSync = async () => {
-                  if (!window.db) return;
-                  const db = window.db;
-                  const { collection, getDocs, setDoc, doc, onSnapshot } = window.FB;
-
-                  try {
-                      // 1. ດຶງຂໍ້ມູນທີ່ມີຢູ່ໃນ Cloud ມາທຽບກັບ LocalStorage
-                      const snap = await getDocs(collection(db, 'xiong_members'));
-                      const localMembers = JSON.parse(localStorage.getItem('xiong_local_members') || '[]');
-                      
-                      if (snap.empty && localMembers.length > 0) {
-                          // ຖ້າ Cloud ວ່າງ ແຕ່ໃນເຄື່ອງມີ 22 ຄົນ ໃຫ້ດັນຂຶ້ນ Cloud ທັງໝົດ
-                          for (const m of localMembers) {
-                              await setDoc(doc(db, 'xiong_members', String(m.id)), m);
-                          }
-                      } else if (!snap.empty) {
-                          // ຖ້າມີຂໍ້ມູນທັງສອງບ່ອນ ໃຫ້ເອົາມາລວມກັນ (Merge) ໂດຍອີງຕາມ ID ເພື່ອບໍ່ໃຫ້ໃຜຫາຍ
-                          const cloudMap = new Map();
-                          snap.docs.forEach(d => cloudMap.set(d.id, { id: d.id, ...d.data() }));
-                          
-                          for (const m of localMembers) {
-                              if (!cloudMap.has(String(m.id))) {
-                                  cloudMap.set(String(m.id), m);
-                                  await setDoc(doc(db, 'xiong_members', String(m.id)), m);
-                              }
-                          }
-                      }
-                  } catch (err) { console.error(err); }
-
-                  // 2. ຮັບຂໍ້ມູນແບບ Realtime ຈາກ Firebase ມາອັບເດດໜ້າຈໍຕະຫຼອດເວລາ
-                  onSnapshot(collection(db, 'xiong_members'), (snapshot) => {
-                      const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-                      if (list.length > 0) {
-                          setMembers(list);
-                          localStorage.setItem('xiong_local_members', JSON.stringify(list));
-                      }
-                  });
-
-                  onSnapshot(collection(db, 'xiong_activities'), (snapshot) => {
-                      const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-                      if (list.length > 0) {
-                          setAllActivities(list);
-                          localStorage.setItem('xiong_local_activities', JSON.stringify(list));
-                      }
-                  });
-
-                  onSnapshot(collection(db, 'xiong_logs'), (snapshot) => {
-                      const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-                      list.sort((a, b) => (b.created_at_ms || 0) - (a.created_at_ms || 0));
-                      setAuditLogs(list.slice(0, 5));
-                  });
-
-                  onSnapshot(collection(db, 'xiong_settings'), (snapshot) => {
-                      snapshot.forEach(dDoc => {
-                          if (dDoc.id === 'banner') {
-                              const val = dDoc.data().text || '';
-                              setEmergencyBanner(val);
-                              setBannerInput(val);
-                              localStorage.setItem('xiong_local_banner', val);
-                          }
-                      });
-                  });
-              };
-
-              if (window.db) {
-                  initFirebaseSync();
-              } else {
-                  window.addEventListener('firebase-ready', initFirebaseSync);
-              }
-          }, []);
-
-          // ບັນທຶກ LocalStorage ປົກກະຕິ
           useEffect(() => { localStorage.setItem('xiong_local_members', JSON.stringify(members)); }, [members]);
           useEffect(() => { localStorage.setItem('xiong_local_activities', JSON.stringify(allActivities)); }, [allActivities]);
           useEffect(() => { localStorage.setItem('xiong_local_logs', JSON.stringify(auditLogs)); }, [auditLogs]);
@@ -312,24 +215,17 @@
           const showConfirm = (message, onConfirm, title = t.successTitle) => setModalConfig({ isOpen: true, title, message, isConfirm: true, onConfirm });
           const closeModal = () => setModalConfig({ isOpen: false, title: '', message: '', onConfirm: null, isConfirm: false });
 
-          const addLog = async (action_text) => {
-              const logId = String(Date.now());
-              const newLog = { id: logId, action_text, created_at: new Date().toISOString(), created_at_ms: Date.now(), username: user?.username || 'SYSTEM' };
+          const addLog = (action_text) => {
+              const newLog = { id: Date.now(), action_text, created_at: new Date().toISOString(), username: user?.username || 'SYSTEM' };
               setAuditLogs(prev => [newLog, ...prev].slice(0, 5)); 
-              if (window.db) {
-                  await window.FB.setDoc(window.FB.doc(window.db, 'xiong_logs', logId), newLog);
-              }
           };
 
           const initialFormState = { first_name: '', last_name: '', gender: 'Male', birth_date: '', birth_village: '', birth_district: '', birth_province: '', father_id: '', mother_id: '', spouse_id: '', village: '', district: '', province: '', bio: '', photo_url: '', phone: '', note: '' };
           const [formData, setFormData] = useState(initialFormState);
 
-          const handleSaveBanner = async () => {
+          const handleSaveBanner = () => {
             setEmergencyBanner(bannerInput);
             setIsEditingBanner(false);
-            if (window.db) {
-                await window.FB.setDoc(window.FB.doc(window.db, 'xiong_settings', 'banner'), { text: bannerInput });
-            }
             addLog('ອັບເດດປະກາດຂ່າວສຸກເສີນ');
             showAlert('ອັບເດດປະກາດຂ່າວສຸກເສີນສຳເລັດ!');
           };
@@ -369,11 +265,8 @@
 
           const handleDelete = (id, name) => {
             if (user.role !== 'ADMIN') { showAlert('ສິດ USER ບໍ່ສາມາດລຶບຂໍ້ມູນໄດ້'); return; }
-            showConfirm(`ທ່ານຕ້ອງການລຶບຂໍ້ມູນຂອງ "${name}" ແທ້ບໍ?`, async () => {
+            showConfirm(`ທ່ານຕ້ອງການລຶບຂໍ້ມູນຂອງ "${name}" ແທ້ບໍ?`, () => {
               setMembers(members.filter(m => m.id !== id));
-              if (window.db) {
-                  await window.FB.deleteDoc(window.FB.doc(window.db, 'xiong_members', String(id)));
-              }
               addLog(`ລຶບຂໍ້ມູນ: ${name}`);
               showAlert('ລຶບຂໍ້ມູນສຳເລັດ!');
             });
@@ -384,31 +277,25 @@
             let finalPhotoUrl = formData.photo_url;
             if (selectedFile) finalPhotoUrl = await fileToBase64(selectedFile); 
 
-            const memberId = editingId ? String(editingId) : String(Date.now());
             const newMem = { 
                 ...formData, 
-                id: memberId,
                 birth_date: parseDateForServer(formData.birth_date),
-                father_id: formData.father_id ? String(formData.father_id) : '',
-                mother_id: formData.mother_id ? String(formData.mother_id) : '',
-                spouse_id: formData.spouse_id ? String(formData.spouse_id) : '',
+                father_id: formData.father_id ? parseInt(formData.father_id) : '',
+                mother_id: formData.mother_id ? parseInt(formData.mother_id) : '',
+                spouse_id: formData.spouse_id ? parseInt(formData.spouse_id) : '',
                 photo_url: finalPhotoUrl
             };
 
             if (editingId) {
-                setMembers(members.map(m => m.id === editingId ? newMem : m));
+                setMembers(members.map(m => m.id === editingId ? { ...newMem, id: editingId } : m));
                 addLog(`ແກ້ໄຂຂໍ້ມູນຂອງ: ${newMem.first_name} ${newMem.last_name}`);
                 showAlert('ອັບເດດຂໍ້ມູນສຳເລັດ!');
             } else {
+                newMem.id = Date.now();
                 setMembers([...members, newMem]);
                 addLog(`ເພີ່ມຂໍ້ມູນສະມາຊິກໃໝ່: ${newMem.first_name} ${newMem.last_name}`);
                 showAlert('ບັນທຶກຂໍ້ມູນສຳເລັດ!');
             }
-
-            if (window.db) {
-                await window.FB.setDoc(window.FB.doc(window.db, 'xiong_members', memberId), newMem);
-            }
-
             handleCancelEdit();
           };
 
@@ -417,10 +304,9 @@
             if (!activityFile) { showAlert('ກະລຸນາເລືອກຮູບພາບກິດຈະກຳ'); return; }
             
             const b64 = await fileToBase64(activityFile);
-            const actId = String(Date.now());
             const newAct = {
-                id: actId,
-                member_id: String(activityModalMember.id),
+                id: Date.now(),
+                member_id: activityModalMember.id,
                 photo_url: b64,
                 title: activityForm.title,
                 description: activityForm.description,
@@ -428,10 +314,6 @@
             };
             
             setAllActivities([...allActivities, newAct]);
-            if (window.db) {
-                await window.FB.setDoc(window.FB.doc(window.db, 'xiong_activities', actId), newAct);
-            }
-
             addLog(`ເພີ່ມກິດຈະກຳໃຫ້: ${activityModalMember.first_name}`);
             showAlert('ເພີ່ມຮູບກິດຈະກຳສຳເລັດແລ້ວ!');
             setActivityModalMember(null); setActivityFile(null); setActivityForm({ title: '', description: '', activity_date: '' });
@@ -441,7 +323,7 @@
             if (a.birth_date && b.birth_date) return new Date(a.birth_date) - new Date(b.birth_date);
             if (a.birth_date && !b.birth_date) return -1;
             if (!a.birth_date && b.birth_date) return 1;
-            return String(a.id).localeCompare(String(b.id));
+            return a.id - b.id;
           };
 
           const sortFamilyTreeForList = (allMembers) => {
