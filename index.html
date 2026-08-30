@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ລະບົບຈັດການຜັງຕະກຸນ XIONG (POS Style)</title>
+    <title>ລະບົບຈັດການຂໍ້ມູນ & ຜັງຕະກຸນ XIONG</title>
     <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
@@ -19,79 +19,136 @@
     <script type="text/babel">
         function App() {
             const [members, setMembers] = React.useState(() => {
-                const saved = localStorage.getItem('xiong_members');
+                const saved = localStorage.getItem('xiong_family_members');
                 return saved ? JSON.parse(saved) : [
                     { id: 1, first_name: 'ຊົ່ງຊົ່ວ', last_name: 'ຊົ່ງ', gender: 'Male', birth_date: '1950', phone: '02055551234', village: 'ວຽງຈັນ', bio: 'ຜູ້ນຳຸ່ນທຳອິດ' }
                 ];
             });
 
-            const [form, setForm] = React.useState({ first_name: '', last_name: '', gender: 'Male', birth_date: '', phone: '', village: '', bio: '' });
+            const [form, setForm] = React.useState({ 
+                first_name: '', last_name: '', gender: 'Male', birth_date: '', 
+                village: '', district: '', province: '', phone: '', bio: '' 
+            });
             const [search, setSearch] = React.useState('');
+            const [editingId, setEditingId] = React.useState(null);
 
             React.useEffect(() => {
-                localStorage.setItem('xiong_members', JSON.stringify(members));
+                localStorage.setItem('xiong_family_members', JSON.stringify(members));
             }, [members]);
 
             const handleSubmit = (e) => {
                 e.preventDefault();
-                if(!form.first_name) return;
-                const newMember = { ...form, id: Date.now() };
-                setMembers([...members, newMember]);
-                setForm({ first_name: '', last_name: '', gender: 'Male', birth_date: '', phone: '', village: '', bio: '' });
-                alert('ບັນທຶກຂໍ້ມູນສຳເລັດ!');
+                if (!form.first_name) return;
+
+                if (editingId) {
+                    setMembers(members.map(m => m.id === editingId ? { ...form, id: editingId } : m));
+                    setEditingId(null);
+                    alert('ອັບເດດຂໍ້ມູນສຳເລັດ!');
+                } else {
+                    const newMember = { ...form, id: Date.now() };
+                    setMembers([...members, newMember]);
+                    alert('ເພີ່ມຂໍ້ມູນຍາດພີ່ນ້ອງສຳເລັດ!');
+                }
+
+                setForm({ first_name: '', last_name: '', gender: 'Male', birth_date: '', village: '', district: '', province: '', phone: '', bio: '' });
+            };
+
+            const handleEdit = (member) => {
+                setEditingId(member.id);
+                setForm(member);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             };
 
             const handleDelete = (id) => {
-                if(confirm('ຕ້ອງການລຶບແທ້ບໍ?')) {
+                if (confirm('ທ່ານຕ້ອງການລຶບຂໍ້ມູນນີ້ແທ້ບໍ?')) {
                     setMembers(members.filter(m => m.id !== id));
                 }
             };
 
-            const filtered = members.filter(m => `${m.first_name} ${m.last_name} ${m.village}`.toLowerCase().includes(search.toLowerCase()));
+            const filtered = members.filter(m => {
+                const text = `${m.first_name || ''} ${m.last_name || ''} ${m.village || ''} ${m.district || ''}`.toLowerCase();
+                return text.includes(search.toLowerCase());
+            });
 
             return (
                 <div className="max-w-4xl mx-auto p-4">
-                    <header className="bg-sky-600 text-white p-4 rounded-xl shadow-md mb-6 text-center">
-                        <h1 className="text-2xl font-bold">🌳 ລະບົບຈັດການຜັງຕະກຸນ XIONG (ແບບອອບລາຍ 100%)</h1>
-                        <p className="text-sm opacity-90">ຂໍ້ມູນເກັບໄວ້ໃນເຄື່ອງສະບາຍใจ ບໍ່ມີວັນຫຼຸດ ບໍ່ມີວັນຖືກບລັອກ</p>
+                    <header className="bg-sky-700 text-white p-5 rounded-2xl shadow-md mb-6 text-center">
+                        <h1 className="text-2xl font-bold">🌳 ລະບົບຈັດການຜັງຕະກຸນ XIONG (Family Tree)</h1>
+                        <p className="text-sm opacity-90 mt-1">ເກັບຂໍ້ມູນປອດໄภัยໃນເຄື່ອງ (LocalStorage) 100% ບໍ່ມີວັນຫຼຸດ ບໍ່ມີວັນຖືກບລັອກໃນ ສປປ ລາວ</p>
                     </header>
 
-                    {/* Form ເພີ່ມຂໍ້ມູນ */}
-                    <div className="bg-white p-6 rounded-xl shadow-md mb-6">
-                        <h2 className="text-lg font-bold text-sky-700 mb-4">➕ ເเพิ่มຂໍ້ມູນຍາດພີ່ນ້ອງ</h2>
+                    {/* Form ເພີ່ມ / ແກ້ໄຂຂໍ້ມູນ */}
+                    <div className="bg-white p-6 rounded-2xl shadow-md mb-6 border border-slate-200">
+                        <h2 className="text-lg font-bold text-sky-800 mb-4">
+                            {editingId ? '📝 ແກ້ໄຂຂໍ້ມູນຍາດພີ່ນ້ອງ' : '👤 ເພີ່ມຂໍ້ມູນຍາດພີ່ນ້ອງໃໝ່'}
+                        </h2>
                         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <input type="text" placeholder="ຊື່" value={form.first_name} onChange={e=>setForm({...form, first_name: e.target.value})} className="border p-2 rounded" required />
-                            <input type="text" placeholder="ນາມສະກຸນ" value={form.last_name} onChange={e=>setForm({...form, last_name: e.target.value})} className="border p-2 rounded" />
-                            <select value={form.gender} onChange={e=>setForm({...form, gender: e.target.value})} className="border p-2 rounded">
-                                <option value="Male">ຊາຍ</option>
-                                <option value="Female">ຍິງ</option>
-                            </select>
-                            <input type="text" placeholder="ປີເກີດ (ເຊັ່ນ: 1990)" value={form.birth_date} onChange={e=>setForm({...form, birth_date: e.target.value})} className="border p-2 rounded" />
-                            <input type="text" placeholder="ເບີໂທລະສັບ" value={form.phone} onChange={e=>setForm({...form, phone: e.target.value})} className="border p-2 rounded" />
-                            <input type="text" placeholder="ບ້ານຢູ່ປະຈຸບັນ" value={form.village} onChange={e=>setForm({...form, village: e.target.value})} className="border p-2 rounded" />
-                            <textarea placeholder="ປະຫວັດຫຍໍ້..." value={form.bio} onChange={e=>setForm({...form, bio: e.target.value})} className="border p-2 rounded md:col-span-2"></textarea>
-                            <button type="submit" className="bg-emerald-600 text-white font-bold p-2 rounded md:col-span-2 hover:bg-emerald-700">💾 ບັນທຶກຂໍ້ມູນ</button>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">ຊື່</label>
+                                <input type="text" placeholder="ພິມຊື່..." value={form.first_name} onChange={e=>setForm({...form, first_name: e.target.value})} className="border p-2.5 rounded-lg w-full" required />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">ນາມສະກຸນ</label>
+                                <input type="text" placeholder="ພິມນາມສະກຸນ..." value={form.last_name} onChange={e=>setForm({...form, last_name: e.target.value})} className="border p-2.5 rounded-lg w-full" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">ເພດ</label>
+                                <select value={form.gender} onChange={e=>setForm({...form, gender: e.target.value})} className="border p-2.5 rounded-lg w-full">
+                                    <option value="Male">ຊາຍ</option>
+                                    <option value="Female">ຍິງ</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">ວັນ/ປີເກີດ</label>
+                                <input type="text" placeholder="ເຊັ່ນ: 15/05/1975 ຫລື 1975" value={form.birth_date} onChange={e=>setForm({...form, birth_date: e.target.value})} className="border p-2.5 rounded-lg w-full" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">ບ້ານຢູ່ປະຈຸບັນ</label>
+                                <input type="text" placeholder="ຊື່ບ້ານ..." value={form.village} onChange={e=>setForm({...form, village: e.target.value})} className="border p-2.5 rounded-lg w-full" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">ເບີໂທລະສັບ</label>
+                                <input type="text" placeholder="ເຊັ່ນ: 020 55551234" value={form.phone} onChange={e=>setForm({...form, phone: e.target.value})} className="border p-2.5 rounded-lg w-full" />
+                            </div>
+                            <div className="md:col-span-2">
+                                <label className="block text-sm font-medium mb-1">ປະຫວັດຫຍໍ້ / ຂໍ້ມູນເພີ່ມເຕີມ</label>
+                                <textarea placeholder="ພິມປະຫວັດ..." value={form.bio} onChange={e=>setForm({...form, bio: e.target.value})} className="border p-2.5 rounded-lg w-full h-20"></textarea>
+                            </div>
+                            <div className="md:col-span-2 flex gap-3">
+                                <button type="submit" className="flex-1 bg-teal-600 text-white font-bold p-3 rounded-xl hover:bg-teal-700 transition">💾 ບັນທຶກຂໍ້ມູນ</button>
+                                {editingId && (
+                                    <button type="button" onClick={() => { setEditingId(null); setForm({ first_name: '', last_name: '', gender: 'Male', birth_date: '', village: '', district: '', province: '', phone: '', bio: '' }); }} className="bg-slate-400 text-white font-bold px-6 py-3 rounded-xl hover:bg-slate-500 transition">ຍົກເລີກ</button>
+                                )}
+                            </div>
                         </form>
                     </div>
 
-                    {/* ຊ່ອງຄົ້ນຫາ ແລະ ລາຍຊື່ */}
-                    <div className="bg-white p-6 rounded-xl shadow-md">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-lg font-bold text-sky-700">📋 ລາຍຊື່ສະມາຊິກ ({filtered.length})</h2>
-                            <input type="text" placeholder="🔍 ค้นหาຊື່, ບ້ານ..." value={search} onChange={e=>setSearch(e.target.value)} className="border p-2 rounded w-1/3" />
+                    {/* ຊ່ອງຄົ້ນຫາ ແລະ ລາຍຊື່ສະມາຊິກ */}
+                    <div className="bg-white p-6 rounded-2xl shadow-md border border-slate-200">
+                        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                            <h2 className="text-lg font-bold text-sky-800">📋 ລາຍຊື່ຍາດພີ່ນ້ອງທັງໝົດ ({filtered.length})</h2>
+                            <input type="text" placeholder="🔍 ค้นหาຊື່, ບ້ານ..." value={search} onChange={e=>setSearch(e.target.value)} className="border p-2.5 rounded-xl w-full sm:w-1/3 text-sm" />
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {filtered.map(m => (
-                                <div key={m.id} className="border p-4 rounded-lg shadow-sm bg-slate-50 flex justify-between items-start">
+                                <div key={m.id} className="border border-slate-200 p-4 rounded-xl shadow-sm bg-slate-50 flex justify-between items-start">
                                     <div>
-                                        <h3 className="font-bold text-sky-800 text-lg">{m.first_name} {m.last_name} ({m.gender === 'Male' ? 'ຊາຍ' : 'ຍິງ'})</h3>
-                                        <p className="text-sm text-slate-600">📅 ປີເກີດ: {m.birth_date || '-'}</p>
+                                        <h3 className="font-bold text-sky-900 text-lg">
+                                            {m.first_name} {m.last_name} 
+                                            <span className={`text-xs ml-2 px-2 py-0.5 rounded-full ${m.gender === 'Male' ? 'bg-sky-100 text-sky-700' : 'bg-pink-100 text-pink-700'}`}>
+                                                {m.gender === 'Male' ? 'ຊາຍ' : 'ຍິງ'}
+                                            </span>
+                                        </h3>
+                                        <p className="text-sm text-slate-600 mt-1">📅 ປີເກີດ: {m.birth_date || '-'}</p>
                                         <p className="text-sm text-slate-600">📞 ໂທ: {m.phone || '-'}</p>
                                         <p className="text-sm text-slate-600">🏠 ບ້ານ: {m.village || '-'}</p>
-                                        {m.bio && <p className="text-xs text-slate-500 mt-2">ℹ️ {m.bio}</p>}
+                                        {m.bio && <p className="text-xs text-slate-500 mt-2 bg-white p-2 rounded border">ℹ️ {m.bio}</p>}
                                     </div>
-                                    <button onClick={() => handleDelete(m.id)} className="text-red-500 hover:text-red-700 font-bold p-1">🗑️</button>
+                                    <div className="flex flex-col gap-1">
+                                        <button onClick={() => handleEdit(m)} className="bg-amber-100 text-amber-700 p-2 rounded-lg text-xs font-bold hover:bg-amber-200">✏️</button>
+                                        <button onClick={() => handleDelete(m.id)} className="bg-rose-100 text-rose-700 p-2 rounded-lg text-xs font-bold hover:bg-rose-200">🗑️</button>
+                                    </div>
                                 </div>
                             ))}
                         </div>
