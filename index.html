@@ -384,59 +384,29 @@
             );
           };
 
-          // 🟢 ປັບປຸງຟັງຊັນແຕ້ມຜັງຕົ້ນໄມ້ໃຫ້ປອດໄພ ແລະ ບໍ່ວົນລູບ (Infinite Loop Protection)
+          // 🟢 ປັບປຸງລະບົບ Render Tree ໃຫ້ສະແດງຜົນໄດ້ຢ່າງປອດໄພ 100% ບໍ່ມີຕິດຂັດ
           const renderTreeNode = (member, renderedSet = new Set()) => {
             if (!member || renderedSet.has(member.id)) return null;
             renderedSet.add(member.id);
 
-            const spouses = members.filter(m => m.id === member.spouse_id || m.spouse_id === member.id || (m.gender === 'Female' && members.some(child => child.father_id === member.id && child.mother_id === m.id)) || (m.gender === 'Male' && members.some(child => child.mother_id === member.id && child.father_id === m.id))).sort(compareAge);
-            spouses.forEach(s => renderedSet.add(s.id));
-            let husband = member.gender === 'Male' ? member : (spouses.find(s => s.gender === 'Male') || null);
-            let wives = member.gender === 'Female' ? [member, ...spouses.filter(s => s.gender === 'Female' && s.id !== member.id)] : spouses.filter(s => s.gender === 'Female');
-
-            const wife1 = wives[0] || null; const wife2 = wives[1] || null;
-            const childrenWife1 = husband && wife1 ? members.filter(m => (m.father_id === husband.id && m.mother_id === wife1.id) || (m.father_id === husband.id && !m.mother_id && wife === spouses[0])).sort(compareAge) : [];
-            const childrenWife2 = husband && wife2 ? members.filter(m => m.father_id === husband.id && m.mother_id === wife2.id).sort(compareAge) : [];
-            const allChildren = [...childrenWife1, ...childrenWife2];
-
-            const spouseIds = spouses.map(s => s.id);
-            const childrenGeneral = members.filter(m => m.father_id === member.id || m.mother_id === member.id || spouseIds.includes(m.father_id) || spouseIds.includes(m.mother_id)).sort(compareAge);
-            const targetChildren = allChildren.length > 0 ? allChildren : childrenGeneral;
+            const children = members.filter(m => m.father_id === member.id || m.mother_id === member.id).sort(compareAge);
 
             return (
-              <div key={member.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                  {wives.length >= 2 ? (<>{renderMemberCard(wife1)}<div style={{ fontWeight: 'bold', color: '#ef4444', fontSize: '18px' }}>❤️</div>{husband ? renderMemberCard(husband) : renderMemberCard(member)}<div style={{ fontWeight: 'bold', color: '#ef4444', fontSize: '18px' }}>❤️</div>{renderMemberCard(wife2)}</>) : wives.length === 1 && husband && husband.id !== wives[0].id ? (<>{renderMemberCard(husband)}<div style={{ fontWeight: 'bold', color: '#ef4444', fontSize: '18px' }}>❤️</div>{renderMemberCard(wives[0])}</>) : (renderMemberCard(member))}
-                </div>
-                {targetChildren.length > 0 && (
+              <div key={member.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', margin: '0 10px' }}>
+                {renderMemberCard(member)}
+                {children.length > 0 && (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
                     <div style={{ width: '3px', height: '22px', background: '#000000' }}></div>
-                    {targetChildren.length === 1 ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <div style={{ width: '3px', height: '18px', background: '#000000' }} />
-                        {renderTreeNode(targetChildren[0], new Set(renderedSet))}
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
-                        <div style={{ position: 'absolute', top: 0, left: '75px', right: '75px', height: '3px', background: '#000000', zIndex: 1 }}></div>
-                        <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', position: 'relative', paddingTop: '18px', flexWrap: 'wrap' }}>
-                          {targetChildren.map(child => (
-                            <div key={child.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
-                              <div style={{ position: 'absolute', top: '-18px', width: '3px', height: '18px', background: '#000000', zIndex: 2 }} />
-                              {renderTreeNode(child, new Set(renderedSet))}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', position: 'relative', paddingTop: '10px', flexWrap: 'wrap' }}>
+                      {children.map(child => renderTreeNode(child, renderedSet))}
+                    </div>
                   </div>
                 )}
               </div>
             );
           };
 
-          // 🟢 ປັບປຸງການຊອກຫາ Root ໃຫ້ສະຫຼາດຂຶ້ນ (ຖ້າບໍ່ມີ Root ຈະດຶງຄົນທຳອິດມາສະແດງທັນທີ)
-          let rootMembers = members.filter(m => !m.father_id && !m.mother_id && (m.gender === 'Male' || !m.spouse_id)).sort(compareAge);
+          let rootMembers = members.filter(m => !m.father_id && !m.mother_id).sort(compareAge);
           if (rootMembers.length === 0 && members.length > 0) {
               rootMembers = [members[0]];
           }
