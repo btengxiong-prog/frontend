@@ -29,8 +29,13 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // 🟢 ປ່ຽນ URL ນີ້ໃຫ້ກົງກັບ Server Backend ຂອງທ່ານ (ຖ້າລັນໃນເຄື່ອງດຽວກັນແມ່ນ localhost:10000)
-        const API_URL = 'http://localhost:10000'; 
+        // --- Utility: ປ່ຽນຮູບພາບເປັນ Base64 ເພື່ອບັນທຶກລົງ LocalStorage ---
+        const fileToBase64 = (file) => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
 
         const formatDisplayDate = (dateStr) => {
           if (!dateStr) return 'ບໍ່ລະບຸ';
@@ -64,24 +69,17 @@
         };
 
         // --- Component: ໃບລາຍງານ ---
-        const MemberReportCard = ({ member, allMembers = [], user, onOpenActivityModal, lang }) => {
-          const [memberActivities, setMemberActivities] = useState([]);
-          
-          // ດຶງຮູບກິດຈະກຳສະເພາະຂອງບຸກຄົນນີ້ຈາກ API
-          useEffect(() => {
-             fetch(`${API_URL}/api/activities/${member.id}`)
-               .then(res => res.json())
-               .then(data => setMemberActivities(data))
-               .catch(err => console.error("Error fetching activities:", err));
-          }, [member.id]);
-
+        const MemberReportCard = ({ member, allMembers = [], allActivities = [], user, onOpenActivityModal, lang }) => {
           const father = allMembers.find(m => m.id === member.father_id);
           const mother = allMembers.find(m => m.id === member.mother_id);
           const spouse = allMembers.find(m => m.id === member.spouse_id || member.id === m.spouse_id);
           
+          const memberActivities = allActivities.filter(a => a.member_id === member.id);
           const generationNumber = calculateGeneration(member, allMembers);
+
           const rowStyle = { fontSize: '15px', lineHeight: '1.6', color: '#000', textAlign: 'left' };
-          const phoneNumber = member.phone || '-';
+          const phoneNumber = member.phone || member.telephone || member.mobile || '-';
+
           const headerTexts = { lao: 'ສະມາຊິກຄອບຄົວ ມົ້ງຊົ່ງ', en: 'Hmong Song Family Member', mo: 'Tsev Neeg Hmoob Xong' };
           const currentHeaderTitle = headerTexts[lang] || headerTexts.lao;
 
@@ -157,7 +155,9 @@
         };
 
         const translations = {
-          lao: { login: 'ເຂົ້າສູ່ລະບົບ', username: 'ຊື່ຜູ້ໃຊ້', password: 'ລະຫັດຜ່ານ', title: 'ລະບົບຈັດການຂໍ້ມູນ & ຜັງຕະກຸນXIONG', userLabel: 'ຜູ້ໃຊ້', printAll: '📊 ພິມລາຍງານລວມທັງໝົດ', logout: 'ອອກຈາກລະບົບ', addMember: '👤 ເພີ່ມຂໍ້ມູນຍາດພີ່ນ້ອງໃໝ່', editMember: '📝 ແກ້ໄຂຂໍ້ມູນ', firstName: 'ຊື່', lastName: 'ນາມສະກຸນ', gender: 'ເພດ', male: 'ຊາຍ', female: 'ຍິງ', birthDate: 'ວັນເກີດ (ພິມ dd/mm/yyyy ຫຼື ປີ)', birthVillage: 'ບ້ານເກີດ', birthDistrict: 'ເມືອງເກີດ', birthProvince: 'ແຂວງເກີດ', spouse: 'ຜົວ / ເມຍ', selectSpouse: '-- ເລືອກຄູ່ສົມລົດ --', father: 'ພໍ່', selectFather: '-- ເລືອກພໍ່ --', mother: 'ແມ່', selectMother: '-- ເລືອກແມ່ --', village: 'ບ້ານຢູ່ປະຈຸບັນ', district: 'ເມືອງ', province: 'ແຂວງ', phone: 'ເບີໂທລະສັບ', selectPhoto: 'ເລືອກຮູບພາບ', bio: 'ປະຫວັດຫຍໍ້:', save: 'ບັນທຶກ', cancel: 'ຍົກເລີກ', searchPlaceholder: '🔍 ຄົ້ນຫາຕາມ ຊື່, ບ້ານ...', listView: '📋 ແບບລາຍຊື່', treeView: '🌿 ແບບຜັງຕົ້ນໄມ້', specificReport: '📄 ໃບລາຍງານສະເພາະ', backToHome: '⬅️ ກັບຄືນໜ້າຫຼັກ', printReport: '🖨️ ພິມໃບລາຍງານ', printTree: '🖨️ ພິມຜັງຕົ້ນໄມ້', successTitle: 'ສຳເລັດ', ok: 'ຕົກລົງ', yes: 'ຕົກລົງ (ລຶບ)' }
+          lao: { login: 'ເຂົ້າສູ່ລະບົບ', username: 'ຊື່ຜູ້ໃຊ້', password: 'ລະຫັດຜ່ານ', title: 'ລະບົບຈັດການຂໍ້ມູນ & ຜັງຕະກຸນXIONG', userLabel: 'ຜູ້ໃຊ້', printAll: '📊 ພິມລາຍງານລວມທັງໝົດ', logout: 'ອອກຈາກລະບົບ', addMember: '👤 ເພີ່ມຂໍ້ມູນຍາດພີ່ນ້ອງໃໝ່', editMember: '📝 ແກ້ໄຂຂໍ້ມູນ', firstName: 'ຊື່', lastName: 'ນາມສະກຸນ', gender: 'ເພດ', male: 'ຊາຍ', female: 'ຍິງ', birthDate: 'ວັນເກີດ (ພິມ dd/mm/yyyy ຫຼື ປີ)', birthVillage: 'ບ້ານເກີດ', birthDistrict: 'ເມືອງເກີດ', birthProvince: 'ແຂວງເກີດ', spouse: 'ຜົວ / ເມຍ', selectSpouse: '-- ເລືອກຄູ່ສົມລົດ --', father: 'ພໍ່', selectFather: '-- ເລືອກພໍ່ --', mother: 'ແມ່', selectMother: '-- ເລືອກແມ່ --', village: 'ບ້ານຢູ່ປະຈຸບັນ', district: 'ເມືອງ', province: 'ແຂວງ', phone: 'ເບີໂທລະສັບ', selectPhoto: 'ເລືອກຮູບພາບ', bio: 'ປະຫວັດຫຍໍ້:', save: 'ບັນທຶກ', cancel: 'ຍົກເລີກ', searchPlaceholder: '🔍 ຄົ້ນຫາຕາມ ຊື່, ບ້ານ...', listView: '📋 ແບບລາຍຊື່', treeView: '🌿 ແບບຜັງຕົ້ນໄມ້', specificReport: '📄 ໃບລາຍງານສະເພາະ', backToHome: '⬅️ ກັບຄືນໜ້າຫຼັກ', printReport: '🖨️ ພິມໃບລາຍງານ', printTree: '🖨️ ພິມຜັງຕົ້ນໄມ້', successTitle: 'ສຳເລັດ', ok: 'ຕົກລົງ', yes: 'ຕົກລົງ (ລຶບ)' },
+          en: { login: 'Login', username: 'Username', password: 'Password', title: 'XIONG Family Management System', userLabel: 'User', printAll: '📊 Print All Reports', logout: 'Logout', addMember: '👤 Add New Relative', editMember: '📝 Edit Details', firstName: 'First Name', lastName: 'Last Name', gender: 'Gender', male: 'Male', female: 'Female', birthDate: 'Birth Date (dd/mm/yyyy)', birthVillage: 'Birth Village', birthDistrict: 'Birth District', birthProvince: 'Birth Province', spouse: 'Spouse', selectSpouse: '-- Select Spouse --', father: 'Father', selectFather: '-- Select Father --', mother: 'Mother', selectMother: '-- Select Mother --', village: 'Current Village', district: 'District', province: 'Province', phone: 'Phone Number', selectPhoto: 'Select Photo', bio: 'Biography / Notes:', save: 'Save', cancel: 'Cancel', searchPlaceholder: '🔍 Search by name...', listView: '📋 List View', treeView: '🌿 Tree View', specificReport: '📄 Individual Report', backToHome: '⬅️ Back', printReport: '🖨️ Print Report', printTree: '🖨️ Print Tree View', successTitle: 'Success', ok: 'OK', yes: 'Confirm' },
+          mo: { login: 'Koom Tes', username: 'Npe Hom', password: 'Tshooj Zov', title: 'Kev Tswj Txeeb Hmong XIONG', userLabel: 'Meej Txiv', printAll: '📊 Sau Ntaub Ntawv Tag Nrho', logout: 'Tawm', addMember: '👤 Ntxiv Neej Tsav Tshiab', editMember: '📝 Kho Duab Ntaub Ntawv', firstName: 'Npe', lastName: 'Pab Npe', gender: 'Pob', male: 'Txiv', female: 'Niam', birthDate: 'Huv Hli (dd/mm/yyyy)', birthVillage: 'Zos T yug', birthDistrict: 'Xeev T yug', birthProvince: 'Nroog T yug', spouse: 'Nkws', selectSpouse: '-- Txaiv Nkws --', father: 'Txiv', selectFather: '-- Txaiv Txiv --', mother: 'Niam', selectMother: '-- Txaiv Niam --', village: 'Zos Nyob', district: 'Xeev', province: 'Nroog', phone: 'Xov Tooj', selectPhoto: 'Txaiv Duab', bio: 'Keeb Kwm / Lus Ntxiv:', save: 'Ceev', cancel: 'Tso Daus', searchPlaceholder: '🔍 Nrhiav npe, zos...', listView: '📋 Hom Npe', treeView: '🌿 Hom Ntoo', specificReport: '📄 Ntaub Ntawv Ib Leej', backToHome: '⬅️ Thim Rau Qhov Qub', printReport: '🖨️ Sau Ntaub Ntawv', printTree: '🖨️ Sau Hom Ntoo', successTitle: 'Tau Tiav', ok: 'Ua Li Cas', yes: 'Pom Zoo' }
         };
 
         const parseDateForServer = (inputDate) => {
@@ -170,6 +170,38 @@
           return trimmed;
         };
 
+        const compareAge = (a, b) => {
+          if (a.birth_date && b.birth_date) return new Date(a.birth_date) - new Date(b.birth_date);
+          if (a.birth_date && !b.birth_date) return -1;
+          if (!a.birth_date && b.birth_date) return 1;
+          return a.id - b.id;
+        };
+
+        const sortFamilyTreeForList = (allMembers) => {
+          const visited = new Set();
+          const sorted = [];
+          const traversePersonAndDescendants = (person) => {
+            if (!person || visited.has(person.id)) return;
+            visited.add(person.id);
+            sorted.push(person);
+            const spouses = allMembers.filter(m => (m.id === person.spouse_id || person.id === m.spouse_id) && m.id !== person.id).sort(compareAge);
+            if (spouses.length > 0 && person.gender === 'Male') {
+              for (const wife of spouses) {
+                if (!visited.has(wife.id)) { visited.add(wife.id); sorted.push(wife); }
+                const childrenOfWife = allMembers.filter(m => (m.father_id === person.id && m.mother_id === wife.id) || (m.father_id === person.id && !m.mother_id && wife === spouses[0])).sort(compareAge);
+                for (const child of childrenOfWife) traversePersonAndDescendants(child);
+              }
+            } else {
+              const directChildren = allMembers.filter(m => (person.gender === 'Male' ? m.father_id === person.id : m.mother_id === person.id)).sort(compareAge);
+              for (const child of directChildren) traversePersonAndDescendants(child);
+            }
+          };
+          const rootMembers = allMembers.filter(m => !m.father_id && !m.mother_id && (m.gender === 'Male' || !m.spouse_id)).sort(compareAge);
+          for (const root of rootMembers) traversePersonAndDescendants(root);
+          for (const m of allMembers) { if (!visited.has(m.id)) { visited.add(m.id); sorted.push(m); } }
+          return sorted;
+        };
+
         function App() {
           const [lang, setLang] = useState('lao');
           const t = translations[lang] || translations.lao;
@@ -177,19 +209,26 @@
           const [user, setUser] = useState(() => {
               const u = localStorage.getItem('family_tree_user');
               const r = localStorage.getItem('family_tree_role');
-              const token = localStorage.getItem('family_tree_token');
-              return u && token ? { username: u, role: r, token } : null;
+              return u ? { username: u, role: r } : null;
           });
-          
           const [loginForm, setLoginForm] = useState({ username: '', password: '' });
-          
-          // 🟢 ຖານຂໍ້ມູນມາຈາກ Backend API
-          const [members, setMembers] = useState([]);
-          const [auditLogs, setAuditLogs] = useState([]);
-          const [emergencyBanner, setEmergencyBanner] = useState('');
-          
+
+          // ຖານຂໍ້ມູນຈຳລອງໃນ LocalStorage
+          const [members, setMembers] = useState(() => {
+              const saved = localStorage.getItem('xiong_local_members');
+              return saved ? JSON.parse(saved) : [{ id: 1, first_name: 'ຕົ້ນຕະກຸນ', last_name: 'ຊົ່ງ', gender: 'Male', birth_date: '1900-01-01', village: '', district: '', province: '', photo_url: '', father_id: '', mother_id: '', spouse_id: '' }];
+          });
+          const [allActivities, setAllActivities] = useState(() => {
+              const saved = localStorage.getItem('xiong_local_activities');
+              return saved ? JSON.parse(saved) : [];
+          });
+          const [auditLogs, setAuditLogs] = useState(() => {
+              const saved = localStorage.getItem('xiong_local_logs');
+              return saved ? JSON.parse(saved) : [];
+          });
+          const [emergencyBanner, setEmergencyBanner] = useState(() => localStorage.getItem('xiong_local_banner') || '');
           const [isEditingBanner, setIsEditingBanner] = useState(false);
-          const [bannerInput, setBannerInput] = useState('');
+          const [bannerInput, setBannerInput] = useState(emergencyBanner);
 
           const [editingId, setEditingId] = useState(null);
           const [selectedFile, setSelectedFile] = useState(null);
@@ -204,108 +243,48 @@
 
           const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', onConfirm: null, isConfirm: false });
 
-          const getAuthHeaders = () => {
-              return { 'Authorization': `Bearer ${user?.token}` };
-          };
-
-          // 🟢 ຟັງຊັນດຶງຂໍ້ມູນຈາກ API ຫຼັງບ້ານ
-          const fetchMembers = async () => {
-              try {
-                  const res = await fetch(`${API_URL}/api/members`);
-                  const data = await res.json();
-                  if(res.ok) setMembers(data); // Backend ຈັດລຽງມາໃຫ້ແລ້ວ
-              } catch(err) { console.error("Error fetching members:", err); }
-          };
-
-          const fetchLogs = async () => {
-              try {
-                  const res = await fetch(`${API_URL}/api/audit-logs`);
-                  const data = await res.json();
-                  if(res.ok) setAuditLogs(data);
-              } catch(err) { console.error("Error fetching logs:", err); }
-          };
-
-          const fetchBanner = async () => {
-              try {
-                  const res = await fetch(`${API_URL}/api/emergency-banner`);
-                  const data = await res.json();
-                  if(res.ok) {
-                      setEmergencyBanner(data.message || '');
-                      setBannerInput(data.message || '');
-                  }
-              } catch(err) { console.error("Error fetching banner:", err); }
-          };
-
-          useEffect(() => {
-              if (user) {
-                  fetchMembers();
-                  fetchLogs();
-                  fetchBanner();
-              }
-          }, [user]);
+          useEffect(() => { localStorage.setItem('xiong_local_members', JSON.stringify(members)); }, [members]);
+          useEffect(() => { localStorage.setItem('xiong_local_activities', JSON.stringify(allActivities)); }, [allActivities]);
+          useEffect(() => { localStorage.setItem('xiong_local_logs', JSON.stringify(auditLogs)); }, [auditLogs]);
+          useEffect(() => { localStorage.setItem('xiong_local_banner', emergencyBanner); }, [emergencyBanner]);
 
           const showAlert = (message, title = t.successTitle) => setModalConfig({ isOpen: true, title, message, isConfirm: false, onConfirm: null });
           const showConfirm = (message, onConfirm, title = t.successTitle) => setModalConfig({ isOpen: true, title, message, isConfirm: true, onConfirm });
           const closeModal = () => setModalConfig({ isOpen: false, title: '', message: '', onConfirm: null, isConfirm: false });
 
+          const addLog = (action_text) => {
+              const newLog = { id: Date.now(), action_text, created_at: new Date().toISOString() };
+              setAuditLogs(prev => [newLog, ...prev].slice(0, 50)); 
+          };
+
           const initialFormState = { first_name: '', last_name: 'ຊົ່ງ', gender: 'Male', birth_date: '', birth_village: '', birth_district: '', birth_province: '', father_id: '', mother_id: '', spouse_id: '', village: '', district: '', province: '', bio: '', photo_url: '', phone: '', note: '' };
           const [formData, setFormData] = useState(initialFormState);
 
-          // 🟢 Login ກັບ API ຫຼັງບ້ານ
-          const handleLoginSubmit = async (e) => {
+          const handleSaveBanner = () => {
+            setEmergencyBanner(bannerInput);
+            setIsEditingBanner(false);
+            addLog('ອັບເດດປະກາດຂ່າວສຸກເສີນ');
+            showAlert('ອັບເດດປະກາດຂ່າວສຸກເສີນສຳເລັດ!');
+          };
+
+          const handleLoginSubmit = (e) => {
             e.preventDefault();
-            try {
-                const res = await fetch(`${API_URL}/api/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(loginForm)
-                });
-                const data = await res.json();
-                
-                if (!res.ok) throw new Error(data.error);
-
-                localStorage.setItem('family_tree_user', data.username);
-                localStorage.setItem('family_tree_role', data.role);
-                localStorage.setItem('family_tree_token', data.token);
-                
-                setUser({ username: data.username, role: data.role, token: data.token });
-                setLoginForm({ username: '', password: '' });
-            } catch (err) {
-                showAlert(err.message, 'ຜິດພາດ');
-            }
+            const role = loginForm.username.includes('ADMIN') ? 'ADMIN' : 'USER';
+            setUser({ username: loginForm.username, role: role });
+            localStorage.setItem('family_tree_user', loginForm.username);
+            localStorage.setItem('family_tree_role', role);
+            setLoginForm({ username: '', password: '' });
+            addLog(`ເຂົ້າສູ່ລະບົບ: ${loginForm.username}`);
           };
 
-          const handleLogout = () => { 
-              localStorage.removeItem('family_tree_user'); 
-              localStorage.removeItem('family_tree_role'); 
-              localStorage.removeItem('family_tree_token'); 
-              setUser(null); 
-          };
+          const handleLogout = () => { localStorage.removeItem('family_tree_user'); localStorage.removeItem('family_tree_role'); setUser(null); };
 
           const handleFileChange = (e) => { const file = e.target.files[0]; if (file) setSelectedFile(file); };
-
-          const handleSaveBanner = async () => {
-            try {
-                const res = await fetch(`${API_URL}/api/emergency-banner`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-                    body: JSON.stringify({ message: bannerInput })
-                });
-                if (!res.ok) throw new Error('ບັນທຶກປະກາດບໍ່ສຳເລັດ');
-                
-                setEmergencyBanner(bannerInput);
-                setIsEditingBanner(false);
-                fetchLogs(); // ອັບເດດ Log
-                showAlert('ອັບເດດປະກາດຂ່າວສຸກເສີນສຳເລັດ!');
-            } catch (err) {
-                showAlert(err.message, 'ຜິດພາດ');
-            }
-          };
 
           const handleEdit = (member) => {
             if (user.role !== 'ADMIN') { showAlert('ສິດ USER ບໍ່ສາມາດແກ້ໄຂຂໍ້ມູນໄດ້'); return; }
             setEditingId(member.id); setSelectedFile(null);
-            let fDate = member.birth_date ? member.birth_date.split('T')[0] : '';
+            let fDate = member.birth_date || '';
             if (/^\d{4}-01-01$/.test(fDate)) fDate = fDate.split('-')[0];
             else if (/^\d{4}-\d{2}-\d{2}$/.test(fDate)) { const [y, m, d] = fDate.split('-'); fDate = `${parseInt(d, 10)}/${parseInt(m, 10)}/${y}`; }
             setFormData({ ...member, birth_date: fDate, father_id: member.father_id || '', mother_id: member.mother_id || '', spouse_id: member.spouse_id || '' });
@@ -316,89 +295,67 @@
 
           const handleDelete = (id, name) => {
             if (user.role !== 'ADMIN') { showAlert('ສິດ USER ບໍ່ສາມາດລຶບຂໍ້ມູນໄດ້'); return; }
-            showConfirm(`ທ່ານຕ້ອງການລຶບຂໍ້ມູນຂອງ "${name}" ແທ້ບໍ?`, async () => {
-              try {
-                  const res = await fetch(`${API_URL}/api/members/${id}`, {
-                      method: 'DELETE',
-                      headers: getAuthHeaders()
-                  });
-                  if(!res.ok) throw new Error('ລຶບບໍ່ສຳເລັດ');
-                  showAlert('ລຶບຂໍ້ມູນສຳເລັດ!');
-                  fetchMembers();
-                  fetchLogs();
-              } catch(err) { showAlert(err.message, 'ຜິດພາດ'); }
+            showConfirm(`ທ່ານຕ້ອງການລຶບຂໍ້ມູນຂອງ "${name}" ແທ້ບໍ?`, () => {
+              setMembers(members.filter(m => m.id !== id));
+              addLog(`ລຶບຂໍ້ມູນ: ${name}`);
+              showAlert('ລຶບຂໍ້ມູນສຳເລັດ!');
             });
           };
 
-          // 🟢 ບັນທຶກຂໍ້ມູນສະມາຊິກ (ສົ່ງ FormData ຮອງຮັບຮູບພາບອັບໂຫຼດຂຶ້ນ Cloudinary)
           const handleSubmit = async (e) => {
             e.preventDefault();
-            const form = new FormData();
-            
-            // ໃສ່ຂໍ້ມູນທັງໝົດລົງໃນ FormData
-            Object.keys(formData).forEach(key => {
-                if(key !== 'birth_date' && formData[key] !== null) {
-                    form.append(key, formData[key]);
-                }
-            });
-            form.append('birth_date', parseDateForServer(formData.birth_date));
-            if(editingId) form.append('existing_photo_url', formData.photo_url || '');
-            if (selectedFile) form.append('photo', selectedFile);
+            let finalPhotoUrl = formData.photo_url;
+            if (selectedFile) finalPhotoUrl = await fileToBase64(selectedFile); // ແປງຮູບເປັນ base64
 
-            const url = editingId ? `${API_URL}/api/members/${editingId}` : `${API_URL}/api/members`;
-            const method = editingId ? 'PUT' : 'POST';
+            const newMem = { 
+                ...formData, 
+                birth_date: parseDateForServer(formData.birth_date),
+                father_id: formData.father_id ? parseInt(formData.father_id) : '',
+                mother_id: formData.mother_id ? parseInt(formData.mother_id) : '',
+                spouse_id: formData.spouse_id ? parseInt(formData.spouse_id) : '',
+                photo_url: finalPhotoUrl
+            };
 
-            try {
-                const res = await fetch(url, {
-                    method,
-                    headers: getAuthHeaders(),
-                    body: form
-                });
-                
-                if (!res.ok) throw new Error('ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກ');
-                
+            if (editingId) {
+                setMembers(members.map(m => m.id === editingId ? { ...newMem, id: editingId } : m));
+                addLog(`ແກ້ໄຂຂໍ້ມູນຂອງ: ${newMem.first_name} ${newMem.last_name}`);
+                showAlert('ອັບເດດຂໍ້ມູນສຳເລັດ!');
+            } else {
+                newMem.id = Date.now();
+                setMembers([...members, newMem]);
+                addLog(`ເພີ່ມຂໍ້ມູນສະມາຊິກໃໝ່: ${newMem.first_name} ${newMem.last_name}`);
                 showAlert('ບັນທຶກຂໍ້ມູນສຳເລັດ!');
-                handleCancelEdit();
-                fetchMembers();
-                fetchLogs();
-            } catch (err) {
-                showAlert(err.message, 'ຜິດພາດ');
             }
+            handleCancelEdit();
           };
 
-          // 🟢 ບັນທຶກກິດຈະກຳ
           const handleActivitySubmit = async (e) => {
             e.preventDefault();
             if (!activityFile) { showAlert('ກະລຸນາເລືອກຮູບພາບກິດຈະກຳ'); return; }
             
-            const form = new FormData();
-            form.append('member_id', activityModalMember.id);
-            form.append('title', activityForm.title);
-            form.append('description', activityForm.description);
-            form.append('activity_date', activityForm.activity_date);
-            form.append('photo', activityFile);
+            const b64 = await fileToBase64(activityFile);
+            const newAct = {
+                id: Date.now(),
+                member_id: activityModalMember.id,
+                photo_url: b64,
+                title: activityForm.title,
+                description: activityForm.description,
+                activity_date: activityForm.activity_date
+            };
             
-            try {
-                const res = await fetch(`${API_URL}/api/activities`, {
-                    method: 'POST',
-                    headers: getAuthHeaders(),
-                    body: form
-                });
-                if(!res.ok) throw new Error('ອັບໂຫຼດຮູບບໍ່ສຳເລັດ');
-                
-                showAlert('ເພີ່ມຮູບກິດຈະກຳສຳເລັດແລ້ວ!');
-                setActivityModalMember(null); setActivityFile(null); setActivityForm({ title: '', description: '', activity_date: '' });
-                fetchLogs();
-            } catch(err) { showAlert(err.message, 'ຜິດພາດ'); }
+            setAllActivities([...allActivities, newAct]);
+            addLog(`ເພີ່ມກິດຈະກຳໃຫ້: ${activityModalMember.first_name}`);
+            showAlert('ເພີ່ມຮູບກິດຈະກຳສຳເລັດແລ້ວ!');
+            setActivityModalMember(null); setActivityFile(null); setActivityForm({ title: '', description: '', activity_date: '' });
           };
 
-          const filteredMembers = members.filter(m => {
+          const sortedMembers = sortFamilyTreeForList(members);
+          const filteredMembers = sortedMembers.filter(m => {
             const fullName = `${m.first_name || ''} ${m.last_name || ''}`.toLowerCase();
             const location = `${m.village || ''} ${m.district || ''} ${m.province || ''}`.toLowerCase();
             return fullName.includes(searchTerm.toLowerCase()) || location.includes(searchTerm.toLowerCase());
           });
 
-          // ແຕ້ມກາດບຸກຄົນໃນຜັງຕົ້ນໄມ້
           const renderMemberCard = (member) => {
             const generationNumber = calculateGeneration(member, members);
             const maleSilhouetteSvg = <svg viewBox="0 0 24 24" width="55" height="55" fill="#64748b" style={{ margin: 'auto' }}><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>;
@@ -419,18 +376,18 @@
             if (!member || renderedSet.has(member.id)) return null;
             renderedSet.add(member.id);
 
-            const spouses = members.filter(m => m.id === member.spouse_id || m.spouse_id === member.id || (m.gender === 'Female' && members.some(child => child.father_id === member.id && child.mother_id === m.id)) || (m.gender === 'Male' && members.some(child => child.mother_id === member.id && child.father_id === m.id)));
+            const spouses = members.filter(m => m.id === member.spouse_id || m.spouse_id === member.id || (m.gender === 'Female' && members.some(child => child.father_id === member.id && child.mother_id === m.id)) || (m.gender === 'Male' && members.some(child => child.mother_id === member.id && child.father_id === m.id))).sort(compareAge);
             spouses.forEach(s => renderedSet.add(s.id));
             let husband = member.gender === 'Male' ? member : (spouses.find(s => s.gender === 'Male') || null);
             let wives = member.gender === 'Female' ? [member, ...spouses.filter(s => s.gender === 'Female' && s.id !== member.id)] : spouses.filter(s => s.gender === 'Female');
 
             const wife1 = wives[0] || null; const wife2 = wives[1] || null;
-            const childrenWife1 = husband && wife1 ? members.filter(m => (m.father_id === husband.id && m.mother_id === wife1.id) || (m.father_id === husband.id && !m.mother_id)) : [];
-            const childrenWife2 = husband && wife2 ? members.filter(m => m.father_id === husband.id && m.mother_id === wife2.id) : [];
+            const childrenWife1 = husband && wife1 ? members.filter(m => (m.father_id === husband.id && m.mother_id === wife1.id) || (m.father_id === husband.id && !m.mother_id)).sort(compareAge) : [];
+            const childrenWife2 = husband && wife2 ? members.filter(m => m.father_id === husband.id && m.mother_id === wife2.id).sort(compareAge) : [];
             const allChildren = [...childrenWife1, ...childrenWife2];
 
             const spouseIds = spouses.map(s => s.id);
-            const childrenGeneral = members.filter(m => m.father_id === member.id || m.mother_id === member.id || spouseIds.includes(m.father_id) || spouseIds.includes(m.mother_id));
+            const childrenGeneral = members.filter(m => m.father_id === member.id || m.mother_id === member.id || spouseIds.includes(m.father_id) || spouseIds.includes(m.mother_id)).sort(compareAge);
             const targetChildren = allChildren.length > 0 ? allChildren : childrenGeneral;
 
             return (
@@ -465,11 +422,18 @@
             );
           };
 
-          const rootMembers = members.filter(m => !m.father_id && !m.mother_id && (m.gender === 'Male' || !m.spouse_id));
+          const rootMembers = members.filter(m => !m.father_id && !m.mother_id && (m.gender === 'Male' || !m.spouse_id)).sort(compareAge);
+
+          const LanguageSelect = () => (
+            <select value={lang} onChange={(e) => setLang(e.target.value)} style={{ padding: '6px 12px', borderRadius: '6px', border: '2px solid #0284c7', fontWeight: 'bold', cursor: 'pointer', backgroundColor: '#ffffff', color: '#0369a1', fontSize: '14px' }}>
+              <option value="lao">LAO</option><option value="en">EN</option><option value="mo">MO</option>
+            </select>
+          );
 
           if (!user) {
             return (
               <div translate="no" lang={lang} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f1f5f9', fontFamily: "'Noto Sans Lao', 'Phetsarath OT', sans-serif" }}>
+                <div style={{ position: 'absolute', top: '20px', right: '20px' }}><LanguageSelect /></div>
                 <div style={{ background: 'white', padding: '35px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', width: '100%', maxWidth: '380px', position: 'relative' }}>
                   <h2 style={{ textAlign: 'center', color: '#1e293b', marginTop: 0, marginBottom: '20px', fontWeight: 'bold', fontSize: '22px' }}>🌳 {t.login}</h2>
                   <form onSubmit={handleLoginSubmit}>
@@ -481,8 +445,9 @@
                       <label style={{ display: 'block', marginBottom: '5px', color: '#475569', fontWeight: 'bold' }}>{t.password}</label>
                       <input type="password" required value={loginForm.password} onChange={e => setLoginForm({...loginForm, password: e.target.value})} style={inputStyle} />
                     </div>
-                    <button type="submit" style={{ width: '100%', background: '#0284c7', color: 'white', border: 'none', padding: '11px', borderRadius: '6px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold' }}>🔒 ເຂົ້າສູ່ລະບົບ (API)</button>
+                    <button type="submit" style={{ width: '100%', background: '#0284c7', color: 'white', border: 'none', padding: '11px', borderRadius: '6px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold' }}>🔒 ເຂົ້າສູ່ລະບົບ</button>
                   </form>
+                  <p style={{textAlign: 'center', fontSize: '12px', marginTop: '15px', color: '#64748b'}}>* ລະບົບ Local Storage (ບໍ່ຕ້ອງຕໍ່ເນັດ)</p>
                 </div>
               </div>
             );
@@ -490,10 +455,10 @@
 
           return (
             <div translate="no" lang={lang} style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto', fontFamily: "'Noto Sans Lao', 'Phetsarath OT', sans-serif" }}>
-              {(emergencyBanner || user.role === 'ADMIN') && (
+              {(emergencyBanner || (user && user.role === 'ADMIN')) && (
                 <div style={{ background: '#fef2f2', border: '2px solid #ef4444', borderRadius: '10px', padding: '15px 20px', marginBottom: '20px', boxShadow: '0 4px 10px rgba(239, 68, 68, 0.15)' }} className="no-print">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 style={{ margin: '0 0 5px 0', color: '#dc2626', fontSize: '17px', fontWeight: 'bold' }}>▲ ປະກາດຂ່າວສຸກເສີນ / ຄວາມສໍາຄັນດ່ວນ</h3>
+                    <h3 style={{ margin: '0 0 5px 0', color: '#dc2626', fontSize: '17px', fontWeight: 'bold' }}>▲ ປະກາດຂ່າວສຸກເສີນ / ຄວາມສໍາຄັນດ່ວນ / ງານສໍາຄັນ ແລະ ອື່ນໆ</h3>
                     {user.role === 'ADMIN' && (
                       <button onClick={() => setIsEditingBanner(!isEditingBanner)} style={{ background: '#ef4444', color: 'white', border: 'none', padding: '5px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>{isEditingBanner ? 'ຍົກເລີກ' : '✏️ ຈັດການປະກາດ'}</button>
                     )}
@@ -507,19 +472,18 @@
                 </div>
               )}
 
-              {/* Modals ຍັງຄົງຮູບແບບເກົ່າ */}
               {activityModalMember && (
                 <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}>
-                  <div style={{ background: 'white', padding: '25px', borderRadius: '16px', width: '100%', maxWidth: '450px' }}>
+                  <div style={{ background: 'white', padding: '25px', borderRadius: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)', width: '100%', maxWidth: '450px' }}>
                     <h3 style={{ margin: '0 0 15px 0', color: '#0369a1', fontSize: '18px', fontWeight: 'bold' }}>📸 ເພີ່ມຮູບກິດຈະກຳ: {activityModalMember.first_name}</h3>
                     <form onSubmit={handleActivitySubmit}>
-                      <div style={{ marginBottom: '12px' }}><label style={labelStyle}>ເລືອກຮູບພາບ: (ອັບໂຫຼດຂຶ້ນ Cloudinary)</label><input type="file" accept="image/*" required onChange={e => setActivityFile(e.target.files[0])} style={inputStyle} /></div>
-                      <div style={{ marginBottom: '12px' }}><label style={labelStyle}>ຫົວຂໍ້ກິດຈະກຳ:</label><input type="text" value={activityForm.title} onChange={e => setActivityForm({...activityForm, title: e.target.value})} style={inputStyle} /></div>
-                      <div style={{ marginBottom: '12px' }}><label style={labelStyle}>ວັນທີ/ປີ ເຮັດກິດຈະກຳ:</label><input type="text" value={activityForm.activity_date} onChange={e => setActivityForm({...activityForm, activity_date: e.target.value})} style={inputStyle} /></div>
-                      <div style={{ marginBottom: '15px' }}><label style={labelStyle}>ຄຳບັນຍາຍ:</label><textarea value={activityForm.description} onChange={e => setActivityForm({...activityForm, description: e.target.value})} style={{ ...inputStyle, height: '70px' }}></textarea></div>
+                      <div style={{ marginBottom: '12px' }}><label style={labelStyle}>ເລືອກຮູບພາບກິດຈະກຳ:</label><input type="file" accept="image/*" required onChange={e => setActivityFile(e.target.files[0])} style={inputStyle} /></div>
+                      <div style={{ marginBottom: '12px' }}><label style={labelStyle}>ຫົວຂໍ້ກິດຈະກຳ:</label><input type="text" placeholder="ພິມຫົວຂໍ້..." value={activityForm.title} onChange={e => setActivityForm({...activityForm, title: e.target.value})} style={inputStyle} /></div>
+                      <div style={{ marginBottom: '12px' }}><label style={labelStyle}>ວັນທີ/ປີ ເຮັດກິດຈະກຳ:</label><input type="text" placeholder="ເຊັ່ນ: 2025" value={activityForm.activity_date} onChange={e => setActivityForm({...activityForm, activity_date: e.target.value})} style={inputStyle} /></div>
+                      <div style={{ marginBottom: '15px' }}><label style={labelStyle}>ຄຳບັນຍາຍ:</label><textarea placeholder="ພິມອະທິບາຍກິດຈະກຳ..." value={activityForm.description} onChange={e => setActivityForm({...activityForm, description: e.target.value})} style={{ ...inputStyle, height: '70px' }}></textarea></div>
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                        <button type="button" onClick={() => setActivityModalMember(null)} style={{ background: '#cbd5e1', padding: '8px 18px', borderRadius: '6px', cursor: 'pointer' }}>ຍົກເລີກ</button>
-                        <button type="submit" style={{ background: '#0284c7', color: 'white', padding: '8px 20px', borderRadius: '6px', cursor: 'pointer' }}>💾 ອັບໂຫຼດ</button>
+                        <button type="button" onClick={() => setActivityModalMember(null)} style={{ background: '#cbd5e1', color: '#334155', border: 'none', padding: '8px 18px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>{t.cancel}</button>
+                        <button type="submit" style={{ background: '#0284c7', color: 'white', border: 'none', padding: '8px 20px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>💾 ບັນທຶກຮູບພາບ</button>
                       </div>
                     </form>
                   </div>
@@ -528,11 +492,11 @@
 
               {modalConfig.isOpen && (
                 <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}>
-                  <div style={{ background: 'white', padding: '25px 30px', borderRadius: '16px', textAlign: 'center' }}>
-                    <h3 style={{ margin: '0 0 10px 0', fontSize: '20px', fontWeight: 'bold' }}>{modalConfig.title}</h3>
-                    <p style={{ margin: '0 0 20px 0', fontSize: '16px' }}>{modalConfig.message}</p>
+                  <div style={{ background: 'white', padding: '25px 30px', borderRadius: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)', width: '100%', maxWidth: '400px', textAlign: 'center' }}>
+                    <h3 style={{ margin: '0 0 10px 0', color: '#1e293b', fontSize: '20px', fontWeight: 'bold' }}>{modalConfig.title}</h3>
+                    <p style={{ margin: '0 0 20px 0', color: '#475569', fontSize: '16px', lineHeight: '1.5' }}>{modalConfig.message}</p>
                     <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
-                      {modalConfig.isConfirm ? (<><button onClick={closeModal} style={{ background: '#cbd5e1', padding: '10px 20px', borderRadius: '8px' }}>ຍົກເລີກ</button><button onClick={() => { modalConfig.onConfirm?.(); closeModal(); }} style={{ background: '#ef4444', color: 'white', padding: '10px 20px', borderRadius: '8px' }}>ຢືນຢັນ</button></>) : (<button onClick={closeModal} style={{ background: '#0284c7', color: 'white', padding: '10px 25px', borderRadius: '8px' }}>ຕົກລົງ</button>)}
+                      {modalConfig.isConfirm ? (<><button onClick={closeModal} style={{ background: '#cbd5e1', color: '#334155', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px' }}>{t.cancel}</button><button onClick={() => { modalConfig.onConfirm?.(); closeModal(); }} style={{ background: '#ef4444', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px' }}>{t.yes}</button></>) : (<button onClick={closeModal} style={{ background: '#0284c7', color: 'white', border: 'none', padding: '10px 25px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px', width: '100%' }}>{t.ok}</button>)}
                     </div>
                   </div>
                 </div>
@@ -541,31 +505,53 @@
               {reportingMember ? (
                 <div style={{ marginBottom: '30px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }} className="no-print">
-                    <button onClick={() => setReportingMember(null)} style={{ background: '#64748b', color: 'white', padding: '8px 16px', borderRadius: '6px' }}>⬅️ ກັບຄືນໜ້າຫຼັກ</button>
-                    <button onClick={() => window.print()} style={{ background: '#3b82f6', color: 'white', padding: '8px 16px', borderRadius: '6px' }}>🖨️ ພິມໃບລາຍງານ</button>
+                    <button onClick={() => setReportingMember(null)} style={{ background: '#64748b', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>{t.backToHome}</button>
+                    <button onClick={() => window.print()} style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>{t.printReport}</button>
                   </div>
-                  <MemberReportCard member={reportingMember} allMembers={members} user={user} onOpenActivityModal={m => setActivityModalMember(m)} lang={lang} />
+                  <MemberReportCard member={reportingMember} allMembers={members} allActivities={allActivities} user={user} onOpenActivityModal={m => setActivityModalMember(m)} lang={lang} />
+                </div>
+              ) : isFullReport ? (
+                <div style={{ marginBottom: '30px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }} className="no-print">
+                    <button onClick={() => setIsFullReport(false)} style={{ background: '#64748b', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>{t.backToHome}</button>
+                    <button onClick={() => window.print()} style={{ background: '#0d9488', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>{t.printAll}</button>
+                  </div>
+                  <div>
+                    {members.length > 0 ? members.map((m) => <MemberReportCard key={m.id} member={m} allMembers={members} allActivities={allActivities} user={user} onOpenActivityModal={mem => setActivityModalMember(mem)} lang={lang} />) : <p style={{ textAlign: 'center', color: '#64748b' }}>ຍັງບໍ່ມີຂໍ້ມູນ</p>}
+                  </div>
                 </div>
               ) : (
                 <>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', background: '#e2e8f0', padding: '12px 20px', borderRadius: '10px' }} className="no-print">
-                    <div>👤 ຜູ້ໃຊ້: <strong>{user.username}</strong> | <span style={{ background: user.role === 'ADMIN' ? '#ef4444' : '#3b82f6', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '12px' }}>{user.role} (Online API)</span></div>
-                    <button onClick={handleLogout} style={{ background: '#64748b', color: 'white', border: 'none', padding: '6px 14px', borderRadius: '6px', cursor: 'pointer' }}>ອອກຈາກລະບົບ</button>
+                    <div>👤 {t.userLabel}: <strong>{user.username}</strong> | <span style={{ background: user.role === 'ADMIN' ? '#ef4444' : '#3b82f6', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold' }}>{user.role} (Local)</span></div>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                      <button onClick={() => setIsFullReport(true)} style={{ background: '#0d9488', color: 'white', border: 'none', padding: '8px 14px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>{t.printAll}</button>
+                      <LanguageSelect />
+                      <button onClick={handleLogout} style={{ background: '#64748b', color: 'white', border: 'none', padding: '6px 14px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>{t.logout}</button>
+                    </div>
                   </div>
 
-                  {/* ປະຫວັດການເຄື່ອນໄຫວລ່າສຸດ 5 ລາຍການ */}
                   <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '15px 20px', marginBottom: '20px' }} className="no-print">
-                    <h3 style={{ margin: '0 0 12px 0', color: '#0369a1', fontSize: '16px', fontWeight: 'bold' }}>📋 ປະຫວັດການເຄື່ອນໄຫວລ່າສຸດ (ຈາກ Server)</h3>
+                    <h3 style={{ margin: '0 0 12px 0', color: '#0369a1', fontSize: '16px', fontWeight: 'bold' }}>📋 ປະຫວັດການເຄື່ອນໄຫວລ່າສຸດ</h3>
                     {auditLogs.length > 0 ? (
-                      <ol style={{ margin: 0, paddingLeft: '20px', fontSize: '14px', color: '#334155' }}>
-                        {auditLogs.map((log) => (
-                           <li key={log.id} style={{ marginBottom: '8px' }}>
-                              <strong>{log.username}:</strong> {log.action_text} <span style={{color:'#64748b', fontSize:'12px'}}>({new Date(log.created_at).toLocaleString()})</span>
-                           </li>
-                        ))}
+                      <ol style={{ margin: 0, paddingLeft: '20px', fontSize: '14px', color: '#334155', lineHeight: '1.8' }}>
+                        {auditLogs.map((log) => {
+                          const matchEdit = log.action_text?.match(/ແກ້ໄຂຂໍ້ມູນຂອງ:\s*(.+)/);
+                          const matchAdd = log.action_text?.match(/ເພີ່ມຂໍ້ມູນສະມາຊິກໃໝ່:\s*(.+)/);
+                          const targetName = matchEdit ? matchEdit[1].trim() : (matchAdd ? matchAdd[1].trim() : null);
+                          const foundMember = targetName ? members.find(m => `${m.first_name} ${m.last_name}`.trim() === targetName || m.first_name.trim() === targetName) : null;
+                          return (
+                            <li key={log.id} style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                              <div><span>{log.action_text}&nbsp;&nbsp;&nbsp;</span><span style={{ color: '#64748b', fontSize: '12px' }}>({new Date(log.created_at).toLocaleString()})</span></div>
+                              {foundMember && <button onClick={() => setReportingMember(foundMember)} style={{ background: '#0284c7', color: 'white', border: 'none', padding: '4px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>👁️ ເບິ່ງລາຍງານ</button>}
+                            </li>
+                          );
+                        })}
                       </ol>
-                    ) : (<p style={{ margin: 0, fontSize: '13px', color: '#94a3b8' }}>ຍັງບໍ່ມີປະຫວັດການເຄື່ອນໄຫວ</p>)}
+                    ) : (<p style={{ margin: 0, fontSize: '13px', color: '#94a3b8', fontStyle: 'italic' }}>ຍັງບໍ່ມີປະຫວັດການເຄື່ອນໄຫວ</p>)}
                   </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}><h1 style={{ color: '#1a365d', margin: 0, fontSize: '26px', fontWeight: 'bold' }}>🌳 {t.title}</h1></div>
 
                   <div style={{ background: editingId ? '#fefce8' : '#f8fafc', padding: '25px', borderRadius: '12px', border: `2px solid ${editingId ? '#eab308' : '#cbd5e1'}`, marginBottom: '30px' }} className="no-print">
                     <h2 style={{ fontSize: '18px', color: '#334155', marginTop: 0 }}>{editingId ? t.editMember : t.addMember}</h2>
@@ -573,7 +559,17 @@
                       <div><label style={labelStyle}>{t.firstName}</label><input type="text" required value={formData.first_name} onChange={e => setFormData({...formData, first_name: e.target.value})} style={inputStyle} /></div>
                       <div><label style={labelStyle}>{t.lastName}</label><input type="text" required value={formData.last_name} onChange={e => setFormData({...formData, last_name: e.target.value})} style={inputStyle} /></div>
                       <div><label style={labelStyle}>{t.gender}</label><select value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value})} style={inputStyle}><option value="Male">{t.male}</option><option value="Female">{t.female}</option></select></div>
-                      <div><label style={labelStyle}>{t.birthDate}</label><input type="text" placeholder="15/3/1973 ຫຼື 1973" value={formData.birth_date} onChange={e => setFormData({...formData, birth_date: e.target.value})} style={inputStyle} /></div>
+                      <div>
+                        <label style={labelStyle}>{t.birthDate}</label>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <input type="text" placeholder="15/3/1973 ຫຼື 1973" value={formData.birth_date} onChange={e => setFormData({...formData, birth_date: e.target.value})} style={inputStyle} />
+                          <input type="date" onChange={e => { if (e.target.value) { const [y, m, d] = e.target.value.split('-'); setFormData({...formData, birth_date: `${parseInt(d, 10)}/${parseInt(m, 10)}/${y}`}); } }} style={{ width: '45px', padding: '4px', cursor: 'pointer', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#f8fafc' }} />
+                        </div>
+                      </div>
+
+                      <div><label style={labelStyle}>{t.birthVillage}:</label><input type="text" placeholder="ຊື່ບ້ານເກີດ..." value={formData.birth_village} onChange={e => setFormData({...formData, birth_village: e.target.value})} style={inputStyle} /></div>
+                      <div><label style={labelStyle}>{t.birthDistrict}:</label><input type="text" placeholder="ຊື່ເມືອງເກີດ..." value={formData.birth_district} onChange={e => setFormData({...formData, birth_district: e.target.value})} style={inputStyle} /></div>
+                      <div style={{ gridColumn: 'span 2' }}><label style={labelStyle}>{t.birthProvince}:</label><input type="text" placeholder="ຊື່ແຂວງເກີດ..." value={formData.birth_province} onChange={e => setFormData({...formData, birth_province: e.target.value})} style={inputStyle} /></div>
                       
                       <div style={{ gridColumn: 'span 2' }}><label style={labelStyle}>💍 {t.spouse}:</label>
                         <select value={formData.spouse_id} onChange={e => setFormData({...formData, spouse_id: e.target.value})} style={inputStyle}>
@@ -596,21 +592,27 @@
                         </select>
                       </div>
 
-                      <div style={{ gridColumn: 'span 2' }}><label style={labelStyle}>{t.selectPhoto}: (ຮອງຮັບການອັບໂຫຼດໄປ Cloudinary)</label><input type="file" accept="image/*" onChange={handleFileChange} style={inputStyle} /></div>
+                      <div><label style={labelStyle}>{t.village}:</label><input type="text" value={formData.village} onChange={e => setFormData({...formData, village: e.target.value})} style={inputStyle} /></div>
+                      <div><label style={labelStyle}>{t.district}:</label><input type="text" value={formData.district} onChange={e => setFormData({...formData, district: e.target.value})} style={inputStyle} /></div>
+                      <div><label style={labelStyle}>{t.province}:</label><input type="text" value={formData.province} onChange={e => setFormData({...formData, province: e.target.value})} style={inputStyle} /></div>
+                      <div><label style={labelStyle}>{t.phone}:</label><input type="text" placeholder="ເຊັ່ນ: 020 55551234" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} style={inputStyle} /></div>
+
+                      <div style={{ gridColumn: 'span 2' }}><label style={labelStyle}>{t.selectPhoto}: (ຄວນເລືອກຮູບຂະໜາດນ້ອຍ ເພື່ອບໍ່ໃຫ້ເຕັມໄວ)</label><input type="file" accept="image/*" onChange={handleFileChange} style={inputStyle} /></div>
                       <div style={{ gridColumn: 'span 2' }}><label style={labelStyle}>{t.bio}</label><textarea value={formData.bio} onChange={e => setFormData({...formData, bio: e.target.value})} style={{ ...inputStyle, height: '60px' }}></textarea></div>
                       
                       <div style={{ gridColumn: 'span 2', textAlign: 'center' }}>
-                        <button type="submit" style={{ background: '#0d9488', color: 'white', padding: '10px 25px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>💾 ບັນທຶກ (ສົ່ງເຂົ້າ Database)</button>
-                        {editingId && <button type="button" onClick={handleCancelEdit} style={{ background: '#ef4444', color: 'white', padding: '10px 25px', borderRadius: '6px', cursor: 'pointer', marginLeft: '10px' }}>ຍົກເລີກ</button>}
+                        <button type="submit" style={{ background: '#0d9488', color: 'white', padding: '10px 25px', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>💾 {t.save}</button>
+                        {editingId && <button type="button" onClick={handleCancelEdit} style={{ background: '#ef4444', color: 'white', padding: '10px 25px', border: 'none', borderRadius: '6px', cursor: 'pointer', marginLeft: '10px' }}>{t.cancel}</button>}
                       </div>
                     </form>
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '15px' }} className="no-print">
-                    <input type="text" placeholder={t.searchPlaceholder} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{ flex: 1, padding: '10px 15px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                    <input type="text" placeholder={t.searchPlaceholder} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{ flex: 1, padding: '10px 15px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '15px' }} />
                     <div style={{ display: 'flex', gap: '5px', background: '#e2e8f0', padding: '4px', borderRadius: '8px' }}>
-                      <button onClick={() => setViewMode('list')} style={{ background: viewMode === 'list' ? 'white' : 'transparent', padding: '8px 15px', borderRadius: '6px', fontWeight: 'bold' }}>📋 ລາຍຊື່ ({filteredMembers.length})</button>
-                      <button onClick={() => setViewMode('tree')} style={{ background: viewMode === 'tree' ? 'white' : 'transparent', padding: '8px 15px', borderRadius: '6px', fontWeight: 'bold' }}>🌿 ຜັງຕົ້ນໄມ້</button>
+                      <button onClick={() => setViewMode('list')} style={{ background: viewMode === 'list' ? 'white' : 'transparent', border: 'none', padding: '8px 15px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>{t.listView} ({filteredMembers.length})</button>
+                      <button onClick={() => setViewMode('tree')} style={{ background: viewMode === 'tree' ? 'white' : 'transparent', border: 'none', padding: '8px 15px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>{t.treeView}</button>
+                      {viewMode === 'tree' && <button onClick={() => window.print()} style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '8px 15px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', marginLeft: '10px' }}>{t.printTree}</button>}
                     </div>
                   </div>
 
@@ -622,17 +624,19 @@
                             {member.photo_url ? <img src={member.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <span style={{ color: '#94a3b8' }}>ບໍ່ມີຮູບພາບ</span>}
                           </div>
                           <h3 style={{ margin: '0 0 8px 0', color: '#1d4ed8' }}>{member.first_name} {member.last_name}</h3>
+                          <p style={{ margin: '3px 0', fontSize: '13px', color: '#334155' }}>📞 {t.phone}: {member.phone || '-'}</p>
                           <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }} className="no-print">
-                            <button onClick={() => setReportingMember(member)} style={{ flex: 1, background: '#38bdf8', color: 'white', padding: '6px', borderRadius: '6px' }}>📄 ໃບລາຍງານ</button>
-                            {user.role === 'ADMIN' && <button onClick={() => setActivityModalMember(member)} style={{ background: '#e0e7ff', padding: '6px 8px', borderRadius: '6px' }} title="ເພີ່ມຮູບກິດຈະກຳ">📸</button>}
-                            {user.role === 'ADMIN' && <button onClick={() => handleEdit(member)} style={{ background: '#fef08a', padding: '6px 10px', borderRadius: '6px' }}>✏️</button>}
-                            {user.role === 'ADMIN' && <button onClick={() => handleDelete(member.id, `${member.first_name} ${member.last_name}`)} style={{ background: '#fee2e2', padding: '6px 10px', borderRadius: '6px' }}>🗑️</button>}
+                            <button onClick={() => setReportingMember(member)} style={{ flex: 1, background: '#38bdf8', color: 'white', border: 'none', padding: '6px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>{t.specificReport}</button>
+                            {user.role === 'ADMIN' && <button onClick={() => setActivityModalMember(member)} style={{ background: '#e0e7ff', padding: '6px 8px', borderRadius: '6px', cursor: 'pointer' }} title="ເພີ່ມຮູບກິດຈະກຳ">📸</button>}
+                            {user.role === 'ADMIN' && <button onClick={() => handleEdit(member)} style={{ background: '#fef08a', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer' }}>✏️</button>}
+                            {user.role === 'ADMIN' && <button onClick={() => handleDelete(member.id, `${member.first_name} ${member.last_name}`)} style={{ background: '#fee2e2', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer' }}>🗑️</button>}
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
                     <div className="print-tree-container" style={{ border: '1px solid #cbd5e1', padding: '20px', borderRadius: '12px', background: 'white', overflow: 'auto', maxWidth: '100%' }}>
+                      <h3 style={{ textAlign: 'center', color: '#334155', marginTop: 0, fontWeight: 'bold' }}>{t.treeView}</h3>
                       <div style={{ display: 'inline-flex', minWidth: '100%', justifyContent: 'center', padding: '20px 10px' }}>
                         {rootMembers.length > 0 ? rootMembers.map(member => renderTreeNode(member)) : <p style={{ color: '#94a3b8' }}>ຍັງບໍ່ມີຂໍ້ມູນ</p>}
                       </div>
