@@ -199,7 +199,7 @@
           });
           const [loginForm, setLoginForm] = useState({ username: '', password: '' });
 
-          // ດຶງຂໍ້ມູນຈາກ LocalStorage ມາເປັນຄ່າຕັ້ງຕົ້ນ (ຮັບປະກັນວ່າຂໍ້ມູນເກົ່າບໍ່ຫາຍ)
+          // ໂຫຼດຂໍ້ມູນຈາກ LocalStorage ມາສະແດງທັນທີ 100% ບໍ່ໃຫ້ມີວ່າງ
           const [members, setMembers] = useState(() => {
               const saved = localStorage.getItem('xiong_local_members');
               return saved ? JSON.parse(saved) : [{ id: 1, first_name: 'ຕົ້ນຕະກຸນ', last_name: 'ຊົ່ງ', gender: 'Male', birth_date: '1900-01-01', village: '', district: '', province: '', photo_url: '', father_id: '', mother_id: '', spouse_id: '' }];
@@ -230,25 +230,25 @@
 
           const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', onConfirm: null, isConfirm: false });
 
-          // ຊິ້ງຂໍ້ມູນກັບ Firebase ແບບປອດໄພ
+          // ຊິ້ງຂໍ້ມູນແບບປອດໄພ: ດັນ LocalStorage 22 ຄົນຂຶ້ນ Firebase ຖ້າ Cloud ຍັງວ່າງ ພ້ອມດຶງ Real-time
           useEffect(() => {
               const initFirebaseSync = async () => {
                   if (!window.db) return;
                   const db = window.db;
-                  const { collection, getDocs, setdoc, doc, onSnapshot } = window.FB;
+                  const { collection, getDocs, setDoc, doc, onSnapshot } = window.FB;
 
-                  // ກວດສອບ Firebase ວ່າວ່າງຫຼືບໍ່ ຖ້າວ່າງ ໃຫ້ເອົາ LocalStorage ດັນຂຶ້ນ Cloud
-                  const snapshot = await getDocs(collection(db, 'xiong_members'));
-                  if (snapshot.empty) {
-                      const localMembers = JSON.parse(localStorage.getItem('xiong_local_members') || '[]');
-                      for (const m of localMembers) {
-                          await window.FB.setDoc(window.FB.doc(db, 'xiong_members', String(m.id)), m);
+                  try {
+                      const snapshot = await getDocs(collection(db, 'xiong_members'));
+                      if (snapshot.empty) {
+                          const localMembers = JSON.parse(localStorage.getItem('xiong_local_members') || '[]');
+                          for (const m of localMembers) {
+                              await setDoc(doc(db, 'xiong_members', String(m.id)), m);
+                          }
                       }
-                  }
+                  } catch (e) { console.error(e); }
 
-                  // Real-time listener ຮັບຂໍ້ມູນຈາກ Cloud
                   onSnapshot(collection(db, 'xiong_members'), (snap) => {
-                      const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                       if (list.length > 0) {
                           setMembers(list);
                           localStorage.setItem('xiong_local_members', JSON.stringify(list));
@@ -256,13 +256,15 @@
                   });
 
                   onSnapshot(collection(db, 'xiong_activities'), (snap) => {
-                      const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                      setAllActivities(list);
-                      localStorage.setItem('xiong_local_activities', JSON.stringify(list));
+                      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                      if (list.length > 0) {
+                          setAllActivities(list);
+                          localStorage.setItem('xiong_local_activities', JSON.stringify(list));
+                      }
                   });
 
                   onSnapshot(collection(db, 'xiong_logs'), (snap) => {
-                      const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                       list.sort((a, b) => (b.created_at_ms || 0) - (a.created_at_ms || 0));
                       setAuditLogs(list.slice(0, 5));
                   });
