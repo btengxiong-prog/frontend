@@ -15,7 +15,6 @@
         * { font-family: 'Phetsarath OT', 'Times New Roman', 'Noto Sans Lao', sans-serif !important; }
         body { background-color: #f8fafc; color: #1e293b; margin: 0; padding: 0; font-size: 16px; }
         
-        /* ປັບຂະໜາດຟອນ ແລະ ຄວາມສົມສ່ວນສຳລັບມືຖື ແລະ ຄອມພິວເຕີ */
         input, select, textarea, button {
             font-size: 15px !important;
         }
@@ -231,7 +230,6 @@
               setAuditLogs(prev => [newLog, ...prev].slice(0, 5)); 
           };
 
-          // 🟢 ປັບປຸງຄ່າເລີ່ມຕົ້ນຂອງ Form ໃຫ້ຊ່ອງຊື່, ນາມສະກຸນ ແລະ ເພດ ຫວ່າງເປົ່າ
           const initialFormState = { first_name: '', last_name: '', gender: '', birth_date: '', birth_village: '', birth_district: '', birth_province: '', father_id: '', mother_id: '', spouse_id: '', village: '', district: '', province: '', bio: '', photo_url: '', phone: '', note: '' };
           const [formData, setFormData] = useState(initialFormState);
 
@@ -386,6 +384,7 @@
             );
           };
 
+          // 🟢 ປັບປຸງຟັງຊັນແຕ້ມຜັງຕົ້ນໄມ້ໃຫ້ປອດໄພ ແລະ ບໍ່ວົນລູບ (Infinite Loop Protection)
           const renderTreeNode = (member, renderedSet = new Set()) => {
             if (!member || renderedSet.has(member.id)) return null;
             renderedSet.add(member.id);
@@ -436,7 +435,11 @@
             );
           };
 
-          const rootMembers = members.filter(m => !m.father_id && !m.mother_id && (m.gender === 'Male' || !m.spouse_id)).sort(compareAge);
+          // 🟢 ປັບປຸງການຊອກຫາ Root ໃຫ້ສະຫຼາດຂຶ້ນ (ຖ້າບໍ່ມີ Root ຈະດຶງຄົນທຳອິດມາສະແດງທັນທີ)
+          let rootMembers = members.filter(m => !m.father_id && !m.mother_id && (m.gender === 'Male' || !m.spouse_id)).sort(compareAge);
+          if (rootMembers.length === 0 && members.length > 0) {
+              rootMembers = [members[0]];
+          }
 
           if (!user) {
             return (
