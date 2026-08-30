@@ -499,16 +499,14 @@
                         {renderTreeNode(targetChildren[0], new Set(renderedSet))}
                       </div>
                     ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+                      <div style={{ display: 'inline-flex', justifyContent: 'center', gap: '20px', position: 'relative', paddingTop: '18px' }}>
                         <div style={{ position: 'absolute', top: 0, left: '80px', right: '80px', height: '3px', background: '#000000', zIndex: 1 }}></div>
-                        <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', position: 'relative', paddingTop: '18px' }}>
-                          {targetChildren.map(child => (
-                            <div key={child.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
-                              <div style={{ position: 'absolute', top: '-18px', width: '3px', height: '18px', background: '#000000', zIndex: 2 }} />
-                              {renderTreeNode(child, new Set(renderedSet))}
-                            </div>
-                          ))}
-                        </div>
+                        {targetChildren.map(child => (
+                          <div key={child.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+                            <div style={{ position: 'absolute', top: '-18px', width: '3px', height: '18px', background: '#000000', zIndex: 2 }} />
+                            {renderTreeNode(child, new Set(renderedSet))}
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
