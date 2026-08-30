@@ -94,19 +94,23 @@
         };
 
         const calculateGeneration = (currentMember, membersList, visited = new Set()) => {
-          if (!currentMember || visited.has(currentMember.id)) return 1;
-          visited.add(currentMember.id);
+          // ໃຊ້ String() ເພື່ອປ້ອງກັນ error ໃນ visited
+          if (!currentMember || visited.has(String(currentMember.id))) return 1;
+          visited.add(String(currentMember.id));
 
-          const father = membersList.find(m => m.id === currentMember.father_id);
-          const mother = membersList.find(m => m.id === currentMember.mother_id);
+          // ເພີ່ມ String() ເຂົ້າໃນການປຽບທຽບ ID ເພື່ອໃຫ້ຊອກຫາພໍ່ ແລະ ແມ່ເຈິສະເໝີ
+          const father = membersList.find(m => String(m.id) === String(currentMember.father_id));
+          const mother = membersList.find(m => String(m.id) === String(currentMember.mother_id));
 
           if (father) return calculateGeneration(father, membersList, visited) + 1;
           if (mother) return calculateGeneration(mother, membersList, visited) + 1;
 
+          // ເພີ່ມ String() ເຂົ້າໃນການປຽບທຽບຄູ່ສົມລົດ
           const spouse = membersList.find(m => 
-            (m.id === currentMember.spouse_id || currentMember.id === m.spouse_id) && m.id !== currentMember.id
+            (String(m.id) === String(currentMember.spouse_id) || String(currentMember.id) === String(m.spouse_id)) && String(m.id) !== String(currentMember.id)
           );
-          if (spouse && !visited.has(spouse.id)) {
+          
+          if (spouse && !visited.has(String(spouse.id))) {
             return calculateGeneration(spouse, membersList, visited);
           }
 
