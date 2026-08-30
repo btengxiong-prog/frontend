@@ -26,10 +26,31 @@
 <body>
     <div id="root"></div>
 
+    <!-- Firebase SDKs ສໍາລັບ Realtime Sync ທົ່ວໂລກ -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+        import { getFirestore, collection, getDocs, setDoc, doc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDcHM2zgFajZEdP_LZhal7ioF4ZtNiXts",
+            authDomain: "posxiong-pos.firebaseapp.com",
+            projectId: "posxiong-pos",
+            storageBucket: "posxiong-pos.appspot.com",
+            messagingSenderId: "501328751337",
+            appId: "1:501328751337:web:5cb9f461c55341c5765e78",
+            measurementId: "G-G1PQJLKBG3"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        window.db = db;
+        window.FB = { collection, getDocs, setDoc, doc, deleteDoc, onSnapshot };
+        window.dispatchEvent(new Event('firebase-ready'));
+    </script>
+
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // ໂຄດປ່ຽນຮູບເປັນ Base64 ເພື່ອບັນທຶກເກັບໄວ້ໃນ LocalStorage ໄດ້ທັນທີໂດຍไม่ต้องຕໍ່ Server
         const fileToBase64 = (file) => new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.readAsDataURL(file);
@@ -73,7 +94,7 @@
           const mother = allMembers.find(m => m.id === member.mother_id);
           const spouse = allMembers.find(m => m.id === member.spouse_id || member.id === m.spouse_id);
           
-          const memberActivities = allActivities.filter(a => String(a.member_id) === String(member.id));
+          const memberActivities = allActivities.filter(a => a.member_id === member.id);
           const generationNumber = calculateGeneration(member, allMembers);
 
           const rowStyle = { fontSize: '15px', lineHeight: '1.6', color: '#000', textAlign: 'left' };
@@ -178,7 +199,7 @@
           });
           const [loginForm, setLoginForm] = useState({ username: '', password: '' });
 
-          // ຖານຂໍ້ມູນເກັບໃນ LocalStorage ລ້ວນໆ 100%
+          // ໂຫຼດຈາກ LocalStorage ມາກ່ອນທັນທີ 100% ເພື່ອບໍ່ໃຫ້ຂໍ້ມູນຫາຍ
           const [members, setMembers] = useState(() => {
               const saved = localStorage.getItem('xiong_local_members');
               return saved ? JSON.parse(saved) : [{ id: 1, first_name: 'ຕົ້ນຕະກຸນ', last_name: 'ຊົ່ງ', gender: 'Male', birth_date: '1900-01-01', village: '', district: '', province: '', photo_url: '', father_id: '', mother_id: '', spouse_id: '' }];
@@ -208,7 +229,67 @@
 
           const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', onConfirm: null, isConfirm: false });
 
-          // ບັນທຶກລົງເຄື່ອງທຸກຄັ້ງທີ່ມີການປ່ຽນແປງ
+          // ລະບົບ Realtime Sync ຜ່ານ Firebase (ຮັກສາ LocalStorage ໄວ້ເປັນ Backup ປອດໄພ)
+          useEffect(() => {
+              const initFirebaseSync = async () => {
+                  if (!window.db) return;
+                  const db = window.db;
+                  const { collection, getDocs, setDoc, doc, onSnapshot } = window.FB;
+
+                  try {
+                      const snap = await getDocs(collection(db, 'xiong_members'));
+                      if (snap.empty) {
+                          // ຖ້າ Cloud ຍັງວ່າງ ໃຫ້ເອົາ 22 ຄົນຈາກ LocalStorage ດັນຂຶ້ນ Cloud ໃຫ້ອັດຕະໂນມັດ
+                          const localMembers = JSON.parse(localStorage.getItem('xiong_local_members') || '[]');
+                          for (const m of localMembers) {
+                              await setDoc(doc(db, 'xiong_members', String(m.id)), m);
+                          }
+                      }
+                  } catch (err) { console.error(err); }
+
+                  // Realtime Listeners ຮັບຂໍ້ມູນອັບເດດຈາກທຸກເຄື່ອງທົ່ວໂລກ
+                  onSnapshot(collection(db, 'xiong_members'), (snapshot) => {
+                      const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                      if (list.length > 0) {
+                          setMembers(list);
+                          localStorage.setItem('xiong_local_members', JSON.stringify(list));
+                      }
+                  });
+
+                  onSnapshot(collection(db, 'xiong_activities'), (snapshot) => {
+                      const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                      if (list.length > 0) {
+                          setAllActivities(list);
+                          localStorage.setItem('xiong_local_activities', JSON.stringify(list));
+                      }
+                  });
+
+                  onSnapshot(collection(db, 'xiong_logs'), (snapshot) => {
+                      const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                      list.sort((a, b) => (b.created_at_ms || 0) - (a.created_at_ms || 0));
+                      setAuditLogs(list.slice(0, 5));
+                  });
+
+                  onSnapshot(collection(db, 'xiong_settings'), (snapshot) => {
+                      snapshot.forEach(dDoc => {
+                          if (dDoc.id === 'banner') {
+                              const val = dDoc.data().text || '';
+                              setEmergencyBanner(val);
+                              setBannerInput(val);
+                              localStorage.setItem('xiong_local_banner', val);
+                          }
+                      });
+                  });
+              };
+
+              if (window.db) {
+                  initFirebaseSync();
+              } else {
+                  window.addEventListener('firebase-ready', initFirebaseSync);
+              }
+          }, []);
+
+          // ບັນທຶກ LocalStorage ປົກກະຕິ
           useEffect(() => { localStorage.setItem('xiong_local_members', JSON.stringify(members)); }, [members]);
           useEffect(() => { localStorage.setItem('xiong_local_activities', JSON.stringify(allActivities)); }, [allActivities]);
           useEffect(() => { localStorage.setItem('xiong_local_logs', JSON.stringify(auditLogs)); }, [auditLogs]);
@@ -218,17 +299,24 @@
           const showConfirm = (message, onConfirm, title = t.successTitle) => setModalConfig({ isOpen: true, title, message, isConfirm: true, onConfirm });
           const closeModal = () => setModalConfig({ isOpen: false, title: '', message: '', onConfirm: null, isConfirm: false });
 
-          const addLog = (action_text) => {
-              const newLog = { id: Date.now(), action_text, created_at: new Date().toISOString(), username: user?.username || 'SYSTEM' };
+          const addLog = async (action_text) => {
+              const logId = String(Date.now());
+              const newLog = { id: logId, action_text, created_at: new Date().toISOString(), created_at_ms: Date.now(), username: user?.username || 'SYSTEM' };
               setAuditLogs(prev => [newLog, ...prev].slice(0, 5)); 
+              if (window.db) {
+                  await window.FB.setDoc(window.FB.doc(window.db, 'xiong_logs', logId), newLog);
+              }
           };
 
           const initialFormState = { first_name: '', last_name: '', gender: 'Male', birth_date: '', birth_village: '', birth_district: '', birth_province: '', father_id: '', mother_id: '', spouse_id: '', village: '', district: '', province: '', bio: '', photo_url: '', phone: '', note: '' };
           const [formData, setFormData] = useState(initialFormState);
 
-          const handleSaveBanner = () => {
+          const handleSaveBanner = async () => {
             setEmergencyBanner(bannerInput);
             setIsEditingBanner(false);
+            if (window.db) {
+                await window.FB.setDoc(window.FB.doc(window.db, 'xiong_settings', 'banner'), { text: bannerInput });
+            }
             addLog('ອັບເດດປະກາດຂ່າວສຸກເສີນ');
             showAlert('ອັບເດດປະກາດຂ່າວສຸກເສີນສຳເລັດ!');
           };
@@ -268,8 +356,11 @@
 
           const handleDelete = (id, name) => {
             if (user.role !== 'ADMIN') { showAlert('ສິດ USER ບໍ່ສາມາດລຶບຂໍ້ມູນໄດ້'); return; }
-            showConfirm(`ທ່ານຕ້ອງການລຶບຂໍ້ມູນຂອງ "${name}" ແທ້ບໍ?`, () => {
-              setMembers(members.filter(m => String(m.id) !== String(id)));
+            showConfirm(`ທ່ານຕ້ອງການລຶບຂໍ້ມູນຂອງ "${name}" ແທ້ບໍ?`, async () => {
+              setMembers(members.filter(m => m.id !== id));
+              if (window.db) {
+                  await window.FB.deleteDoc(window.FB.doc(window.db, 'xiong_members', String(id)));
+              }
               addLog(`ລຶບຂໍ້ມູນ: ${name}`);
               showAlert('ລຶບຂໍ້ມູນສຳເລັດ!');
             });
@@ -280,8 +371,10 @@
             let finalPhotoUrl = formData.photo_url;
             if (selectedFile) finalPhotoUrl = await fileToBase64(selectedFile); 
 
+            const memberId = editingId ? String(editingId) : String(Date.now());
             const newMem = { 
                 ...formData, 
+                id: memberId,
                 birth_date: parseDateForServer(formData.birth_date),
                 father_id: formData.father_id ? String(formData.father_id) : '',
                 mother_id: formData.mother_id ? String(formData.mother_id) : '',
@@ -290,15 +383,19 @@
             };
 
             if (editingId) {
-                setMembers(members.map(m => String(m.id) === String(editingId) ? { ...newMem, id: editingId } : m));
+                setMembers(members.map(m => m.id === editingId ? newMem : m));
                 addLog(`ແກ້ໄຂຂໍ້ມູນຂອງ: ${newMem.first_name} ${newMem.last_name}`);
                 showAlert('ອັບເດດຂໍ້ມູນສຳເລັດ!');
             } else {
-                newMem.id = Date.now();
                 setMembers([...members, newMem]);
                 addLog(`ເພີ່ມຂໍ້ມູນສະມາຊິກໃໝ່: ${newMem.first_name} ${newMem.last_name}`);
                 showAlert('ບັນທຶກຂໍ້ມູນສຳເລັດ!');
             }
+
+            if (window.db) {
+                await window.FB.setDoc(window.FB.doc(window.db, 'xiong_members', memberId), newMem);
+            }
+
             handleCancelEdit();
           };
 
@@ -307,9 +404,10 @@
             if (!activityFile) { showAlert('ກະລຸນາເລືອກຮູບພາບກິດຈະກຳ'); return; }
             
             const b64 = await fileToBase64(activityFile);
+            const actId = String(Date.now());
             const newAct = {
-                id: Date.now(),
-                member_id: activityModalMember.id,
+                id: actId,
+                member_id: String(activityModalMember.id),
                 photo_url: b64,
                 title: activityForm.title,
                 description: activityForm.description,
@@ -317,6 +415,10 @@
             };
             
             setAllActivities([...allActivities, newAct]);
+            if (window.db) {
+                await window.FB.setDoc(window.FB.doc(window.db, 'xiong_activities', actId), newAct);
+            }
+
             addLog(`ເພີ່ມກິດຈະກຳໃຫ້: ${activityModalMember.first_name}`);
             showAlert('ເພີ່ມຮູບກິດຈະກຳສຳເລັດແລ້ວ!');
             setActivityModalMember(null); setActivityFile(null); setActivityForm({ title: '', description: '', activity_date: '' });
@@ -336,15 +438,15 @@
               if (!person || visited.has(person.id)) return;
               visited.add(person.id);
               sorted.push(person);
-              const spouses = allMembers.filter(m => (String(m.id) === String(person.spouse_id) || String(person.id) === String(m.spouse_id)) && String(m.id) !== String(person.id)).sort(compareAge);
+              const spouses = allMembers.filter(m => (m.id === person.spouse_id || person.id === m.spouse_id) && m.id !== person.id).sort(compareAge);
               if (spouses.length > 0 && person.gender === 'Male') {
                 for (const wife of spouses) {
                   if (!visited.has(wife.id)) { visited.add(wife.id); sorted.push(wife); }
-                  const childrenOfWife = allMembers.filter(m => (String(m.father_id) === String(person.id) && String(m.mother_id) === String(wife.id)) || (String(m.father_id) === String(person.id) && !m.mother_id && wife === spouses[0])).sort(compareAge);
+                  const childrenOfWife = allMembers.filter(m => (m.father_id === person.id && m.mother_id === wife.id) || (m.father_id === person.id && !m.mother_id && wife === spouses[0])).sort(compareAge);
                   for (const child of childrenOfWife) traversePersonAndDescendants(child);
                 }
               } else {
-                const directChildren = allMembers.filter(m => (person.gender === 'Male' ? String(m.father_id) === String(person.id) : String(m.mother_id) === String(person.id))).sort(compareAge);
+                const directChildren = allMembers.filter(m => (person.gender === 'Male' ? m.father_id === person.id : m.mother_id === person.id)).sort(compareAge);
                 for (const child of directChildren) traversePersonAndDescendants(child);
               }
             };
@@ -381,24 +483,24 @@
             if (!member || renderedSet.has(member.id)) return null;
             renderedSet.add(member.id);
 
-            const spouses = members.filter(m => String(m.id) === String(member.spouse_id) || String(m.spouse_id) === String(member.id) || (m.gender === 'Female' && members.some(child => String(child.father_id) === String(member.id) && String(child.mother_id) === String(m.id))) || (m.gender === 'Male' && members.some(child => String(child.mother_id) === String(member.id) && String(child.father_id) === String(m.id)))).sort(compareAge);
+            const spouses = members.filter(m => m.id === member.spouse_id || m.spouse_id === member.id || (m.gender === 'Female' && members.some(child => child.father_id === member.id && child.mother_id === m.id)) || (m.gender === 'Male' && members.some(child => child.mother_id === member.id && child.father_id === m.id))).sort(compareAge);
             spouses.forEach(s => renderedSet.add(s.id));
             let husband = member.gender === 'Male' ? member : (spouses.find(s => s.gender === 'Male') || null);
-            let wives = member.gender === 'Female' ? [member, ...spouses.filter(s => s.gender === 'Female' && String(s.id) !== String(member.id))] : spouses.filter(s => s.gender === 'Female');
+            let wives = member.gender === 'Female' ? [member, ...spouses.filter(s => s.gender === 'Female' && s.id !== member.id)] : spouses.filter(s => s.gender === 'Female');
 
             const wife1 = wives[0] || null; const wife2 = wives[1] || null;
-            const childrenWife1 = husband && wife1 ? members.filter(m => (String(m.father_id) === String(husband.id) && String(m.mother_id) === String(wife1.id)) || (String(m.father_id) === String(husband.id) && !m.mother_id)).sort(compareAge) : [];
-            const childrenWife2 = husband && wife2 ? members.filter(m => String(m.father_id) === String(husband.id) && String(m.mother_id) === String(wife2.id)).sort(compareAge) : [];
+            const childrenWife1 = husband && wife1 ? members.filter(m => (m.father_id === husband.id && m.mother_id === wife1.id) || (m.father_id === husband.id && !m.mother_id)).sort(compareAge) : [];
+            const childrenWife2 = husband && wife2 ? members.filter(m => m.father_id === husband.id && m.mother_id === wife2.id).sort(compareAge) : [];
             const allChildren = [...childrenWife1, ...childrenWife2];
 
-            const spouseIds = spouses.map(s => String(s.id));
-            const childrenGeneral = members.filter(m => String(m.father_id) === String(member.id) || String(m.mother_id) === String(member.id) || spouseIds.includes(String(m.father_id)) || spouseIds.includes(String(m.mother_id))).sort(compareAge);
+            const spouseIds = spouses.map(s => s.id);
+            const childrenGeneral = members.filter(m => m.father_id === member.id || m.mother_id === member.id || spouseIds.includes(m.father_id) || spouseIds.includes(m.mother_id)).sort(compareAge);
             const targetChildren = allChildren.length > 0 ? allChildren : childrenGeneral;
 
             return (
               <div key={member.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {wives.length >= 2 ? (<>{renderMemberCard(wife1)}<div style={{ fontWeight: 'bold', color: '#ef4444', fontSize: '18px' }}>❤️</div>{husband ? renderMemberCard(husband) : renderMemberCard(member)}<div style={{ fontWeight: 'bold', color: '#ef4444', fontSize: '18px' }}>❤️</div>{renderMemberCard(wife2)}</>) : wives.length === 1 && husband && String(husband.id) !== String(wives[0].id) ? (<>{renderMemberCard(husband)}<div style={{ fontWeight: 'bold', color: '#ef4444', fontSize: '18px' }}>❤️</div>{renderMemberCard(wives[0])}</>) : (renderMemberCard(member))}
+                  {wives.length >= 2 ? (<>{renderMemberCard(wife1)}<div style={{ fontWeight: 'bold', color: '#ef4444', fontSize: '18px' }}>❤️</div>{husband ? renderMemberCard(husband) : renderMemberCard(member)}<div style={{ fontWeight: 'bold', color: '#ef4444', fontSize: '18px' }}>❤️</div>{renderMemberCard(wife2)}</>) : wives.length === 1 && husband && husband.id !== wives[0].id ? (<>{renderMemberCard(husband)}<div style={{ fontWeight: 'bold', color: '#ef4444', fontSize: '18px' }}>❤️</div>{renderMemberCard(wives[0])}</>) : (renderMemberCard(member))}
                 </div>
                 {targetChildren.length > 0 && (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
