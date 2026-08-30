@@ -12,7 +12,7 @@
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * { font-family: 'Noto Sans Lao', 'Phetsarath OT', sans-serif !important; }
+        * { font-family: 'Phetsarath OT', 'Times New Roman', 'Noto Sans Lao', serif, sans-serif !important; }
         body { background-color: #f8fafc; color: #1e293b; margin: 0; padding: 0; }
         
         @media print { 
@@ -220,7 +220,6 @@
               setAuditLogs(prev => [newLog, ...prev].slice(0, 5)); 
           };
 
-          // ປັບປຸງໃຫ້ initialFormState ເປັນຄ່າຫວ່າງ (Reset ບໍ່ໃຫ້ຈື່ຄ່າເກົ່າ)
           const initialFormState = { first_name: '', last_name: '', gender: 'Male', birth_date: '', birth_village: '', birth_district: '', birth_province: '', father_id: '', mother_id: '', spouse_id: '', village: '', district: '', province: '', bio: '', photo_url: '', phone: '', note: '' };
           const [formData, setFormData] = useState(initialFormState);
 
@@ -429,7 +428,7 @@
 
           if (!user) {
             return (
-              <div translate="no" lang={lang} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f1f5f9', fontFamily: "'Noto Sans Lao', 'Phetsarath OT', sans-serif" }}>
+              <div translate="no" lang={lang} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f1f5f9' }}>
                 <div style={{ background: 'white', padding: '35px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', width: '100%', maxWidth: '380px' }}>
                   <h2 style={{ textAlign: 'center', color: '#1e293b', marginTop: 0, marginBottom: '20px', fontWeight: 'bold', fontSize: '22px' }}>🌳 {t.login}</h2>
                   <form onSubmit={handleLoginSubmit}>
@@ -449,7 +448,7 @@
           }
 
           return (
-            <div translate="no" lang={lang} style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto', fontFamily: "'Noto Sans Lao', 'Phetsarath OT', sans-serif" }}>
+            <div translate="no" lang={lang} style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
               {(emergencyBanner || user.role === 'ADMIN') && (
                 <div style={{ background: '#fef2f2', border: '2px solid #ef4444', borderRadius: '10px', padding: '15px 20px', marginBottom: '20px', boxShadow: '0 4px 10px rgba(239, 68, 68, 0.15)' }} className="no-print">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
