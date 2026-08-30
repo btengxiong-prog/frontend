@@ -15,7 +15,6 @@
             @page { size: landscape; margin: 10mm; } 
             .no-print { display: none !important; } 
             body { background: white; margin: 0; padding: 0; } 
-            .print-tree-container { width: 100% !important; overflow: visible !important; transform: scale(0.9); transform-origin: top left; }
         }
     </style>
 </head>
@@ -23,35 +22,31 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const calculateGeneration = (currentMember, membersList, visited = new Set()) => {
-            if (!currentMember || visited.has(currentMember.id)) return 1;
-            visited.add(currentMember.id);
-            const father = membersList.find(m => m.id === currentMember.father_id);
-            const mother = membersList.find(m => m.id === currentMember.mother_id);
-            if (father) return calculateGeneration(father, membersList, visited) + 1;
-            if (mother) return calculateGeneration(mother, membersList, visited) + 1;
-            const spouse = membersList.find(m => (m.id === currentMember.spouse_id || currentMember.id === m.spouse_id) && m.id !== currentMember.id);
-            if (spouse && !visited.has(spouse.id)) return calculateGeneration(spouse, membersList, visited);
-            return 1;
-        };
-
         function App() {
+            // ດຶງຂໍ້ມູນຈາກ localStorage ມາໃຊ້ຮັກສາຂໍ້ມູນເກົ່າທັງໝົດໄວ້
             const [members, setMembers] = React.useState(() => {
                 const saved = localStorage.getItem('xiong_family_all_members');
                 return saved ? JSON.parse(saved) : [
-                    { id: 1, first_name: 'ຊົ່ງຊົ່ວ', last_name: 'ຊົ່ງ', gender: 'Male', birth_date: '1950', village: 'ວຽງຈັນ', bio: 'ຜູ້ນຳຸ່ນທຳອິດ' }
+                    { id: 1, first_name: 'ຊົ່ງຊົ່ວ', last_name: 'ຊົ່ງ', gender: 'Male', birth_date: '1950-01-01', village: 'ວຽງຈັນ', district: 'ຈັນທະບູລີ', province: 'ວຽງຈັນ', phone: '02055551234', bio: 'ຜູ້ນຳຸ່ນທຳອິດ' }
                 ];
             });
 
-            const [user] = React.useState({ username: 'XIONG_ADMIN', role: 'ADMIN' });
+            const [user, setUser] = React.useState(() => {
+                const savedUser = localStorage.getItem('family_tree_user');
+                const savedRole = localStorage.getItem('family_tree_role');
+                return savedUser ? { username: savedUser, role: savedRole } : { username: 'XIONG_ADMIN', role: 'ADMIN' };
+            });
+
             const [viewMode, setViewMode] = React.useState('list');
             const [searchTerm, setSearchTerm] = React.useState('');
+            const [reportingMember, setReportingMember] = React.useState(null);
             const [editingId, setEditingId] = React.useState(null);
 
             const initialForm = {
                 first_name: '', last_name: '', gender: 'Male', birth_date: '',
+                birth_village: '', birth_district: '', birth_province: '',
                 father_id: '', mother_id: '', spouse_id: '',
-                village: '', phone: '', bio: ''
+                village: '', district: '', province: '', phone: '', bio: '', note: ''
             };
 
             const [formData, setFormData] = React.useState(initialForm);
@@ -87,97 +82,32 @@
             };
 
             const filteredMembers = members.filter(m => {
-                const text = `${m.first_name || ''} ${m.last_name || ''} ${m.village || ''}`.toLowerCase();
-                return text.includes(searchTerm.toLowerCase());
+                const fullName = `${m.first_name || ''} ${m.last_name || ''}`.toLowerCase();
+                const location = `${m.village || ''} ${m.district || ''} ${m.province || ''}`.toLowerCase();
+                return fullName.includes(searchTerm.toLowerCase()) || location.includes(searchTerm.toLowerCase());
             });
-
-            // ຟັງຊັນແຕ້ມກາດບຸກຄົນໃນຜັງຕົ້ນໄມ້
-            const renderMemberCard = (member) => {
-                const gen = calculateGeneration(member, members);
-                return (
-                    <div key={member.id} style={{
-                        border: `2px solid ${member.gender === 'Male' ? '#0284c7' : '#ec4899'}`,
-                        background: member.gender === 'Male' ? '#f0f9ff' : '#fdf2f8',
-                        borderRadius: '16px', padding: '14px 10px', width: '150px', textAlign: 'center',
-                        boxShadow: '0 4px 6px rgba(0,0,0,0.08)', flexShrink: 0, position: 'relative'
-                    }}>
-                        <div style={{
-                            position: 'absolute', top: '6px', right: '8px', background: member.gender === 'Male' ? '#0284c7' : '#ec4899',
-                            color: '#ffffff', fontSize: '11px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '6px'
-                        }}>P.{gen}</div>
-                        <div style={{ width: '60px', height: '60px', borderRadius: '50%', margin: '0 auto 8px auto', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>
-                            {member.gender === 'Male' ? '👨' : '👩'}
-                        </div>
-                        <strong style={{ fontSize: '14px', color: member.gender === 'Male' ? '#0369a1' : '#be185d', display: 'block' }}>
-                            {member.first_name} {member.last_name}
-                        </strong>
-                    </div>
-                );
-            };
-
-            // ຟັງຊັນແຕ້ມເສັ້ນຜັງຕົ້ນໄມ້
-            const renderTreeNode = (member, renderedSet = new Set()) => {
-                if (!member || renderedSet.has(member.id)) return null;
-                renderedSet.add(member.id);
-
-                const spouses = members.filter(m => m.id === member.spouse_id || m.spouse_id === member.id);
-                spouses.forEach(s => renderedSet.add(s.id));
-                const children = members.filter(m => m.father_id === member.id || m.mother_id === member.id);
-
-                return (
-                    <div key={member.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            {renderMemberCard(member)}
-                            {spouses.length > 0 && <div style={{ fontWeight: 'bold', color: '#ef4444', fontSize: '18px' }}>❤️</div>}
-                            {spouses.length > 0 && renderMemberCard(spouses[0])}
-                        </div>
-
-                        {children.length > 0 && (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
-                                <div style={{ width: '3px', height: '22px', background: '#000000' }}></div>
-                                <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', position: 'relative', paddingTop: '18px' }}>
-                                    {children.length > 1 && <div style={{ position: 'absolute', top: 0, left: '50px', right: '50px', height: '3px', background: '#000000', zIndex: 1 }}></div>}
-                                    {children.map(child => (
-                                        <div key={child.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
-                                            <div style={{ position: 'absolute', top: '-18px', width: '3px', height: '18px', background: '#000000', zIndex: 2 }} />
-                                            {renderTreeNode(child, new Set(renderedSet))}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                );
-            };
-
-            const rootMembers = members.filter(m => !m.father_id && !m.mother_id);
 
             return (
                 <div className="max-w-6xl mx-auto p-4 md:p-6">
+                    {/* Header */}
                     <div className="flex justify-between items-center mb-6 bg-white p-4 rounded-xl shadow-sm border border-slate-200 no-print">
                         <div>👤 ຜູ້ໃຊ້: <strong>{user.username}</strong> | <span className="bg-red-500 text-white px-2 py-0.5 rounded-full text-xs font-bold">{user.role}</span></div>
+                        <button onClick={() => { localStorage.clear(); location.reload(); }} className="bg-slate-500 text-white px-3 py-1 rounded-lg text-sm font-bold">ອອກຈາກລະບົບ</button>
                     </div>
 
-                    <h1 className="text-2xl md:text-3xl font-bold text-slate-800 mb-6 text-center">🌳 ລະບົບຈັດການຂໍ້ມູນ & ຜັງຕະກຸນ XIONG (Offline)</h1>
+                    <h1 className="text-2xl md:text-3xl font-bold text-slate-800 mb-6 text-center">🌳 ລະບົບຈັດການຂໍ້ມູນ & ຜັງຕະກຸນ XIONG</h1>
 
-                    {/* Form */}
+                    {/* Form ເພີ່ມ/ແກ້ໄຂ */}
                     <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8 no-print">
                         <h2 className="text-lg font-bold text-sky-800 mb-4">{editingId ? '📝 ແກ້ໄຂຂໍ້ມູນ' : '👤 ເພີ່ມຂໍ້ມູນຍາດພີ່ນ້ອງໃໝ່'}</h2>
                         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div><label className="block text-sm font-medium mb-1">ຊື່</label><input type="text" required value={formData.first_name} onChange={e=>setFormData({...formData, first_name: e.target.value})} className="border p-2.5 rounded-xl w-full" /></div>
                             <div><label className="block text-sm font-medium mb-1">ນາມສະກຸນ</label><input type="text" required value={formData.last_name} onChange={e=>setFormData({...formData, last_name: e.target.value})} className="border p-2.5 rounded-xl w-full" /></div>
                             <div><label className="block text-sm font-medium mb-1">ເພດ</label><select value={formData.gender} onChange={e=>setFormData({...formData, gender: e.target.value})} className="border p-2.5 rounded-xl w-full"><option value="Male">ຊາຍ</option><option value="Female">ຍິງ</option></select></div>
-                            <div><label className="block text-sm font-medium mb-1">ປີເກີດ</label><input type="text" value={formData.birth_date} onChange={e=>setFormData({...formData, birth_date: e.target.value})} className="border p-2.5 rounded-xl w-full" /></div>
-                            
-                            {/* Select ພໍ່ ແມ່ ຜົວເມຍ */}
-                            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-slate-50 rounded-xl border">
-                                <div><label className="block text-sm font-medium mb-1">ພໍ່</label><select value={formData.father_id} onChange={e=>setFormData({...formData, father_id: parseInt(e.target.value) || ''})} className="border p-2.5 rounded-xl w-full"><option value="">-- ເລືອກ --</option>{members.filter(m=>m.gender==='Male').map(m=><option key={m.id} value={m.id}>{m.first_name}</option>)}</select></div>
-                                <div><label className="block text-sm font-medium mb-1">ແມ່</label><select value={formData.mother_id} onChange={e=>setFormData({...formData, mother_id: parseInt(e.target.value) || ''})} className="border p-2.5 rounded-xl w-full"><option value="">-- ເລືອກ --</option>{members.filter(m=>m.gender==='Female').map(m=><option key={m.id} value={m.id}>{m.first_name}</option>)}</select></div>
-                                <div><label className="block text-sm font-medium mb-1">ຄູ່ສົມລົດ</label><select value={formData.spouse_id} onChange={e=>setFormData({...formData, spouse_id: parseInt(e.target.value) || ''})} className="border p-2.5 rounded-xl w-full"><option value="">-- ເລືອກ --</option>{members.map(m=><option key={m.id} value={m.id}>{m.first_name}</option>)}</select></div>
-                            </div>
-
+                            <div><label className="block text-sm font-medium mb-1">ວັນເກີດ (ປີ/ວັນທີ)</label><input type="text" placeholder="ເຊັ່ນ: 1975" value={formData.birth_date} onChange={e=>setFormData({...formData, birth_date: e.target.value})} className="border p-2.5 rounded-xl w-full" /></div>
                             <div><label className="block text-sm font-medium mb-1">ບ້ານຢູ່ປະຈຸບັນ</label><input type="text" value={formData.village} onChange={e=>setFormData({...formData, village: e.target.value})} className="border p-2.5 rounded-xl w-full" /></div>
                             <div><label className="block text-sm font-medium mb-1">ເບີໂທລະສັບ</label><input type="text" value={formData.phone} onChange={e=>setFormData({...formData, phone: e.target.value})} className="border p-2.5 rounded-xl w-full" /></div>
+                            <div className="md:col-span-2"><label className="block text-sm font-medium mb-1">ປະຫວັດຫຍໍ້:</label><textarea value={formData.bio} onChange={e=>setFormData({...formData, bio: e.target.value})} className="border p-2.5 rounded-xl w-full h-20"></textarea></div>
                             <div className="md:col-span-2 flex gap-2">
                                 <button type="submit" className="flex-1 bg-teal-600 text-white font-bold p-3 rounded-xl hover:bg-teal-700">💾 ບັນທຶກ</button>
                                 {editingId && <button type="button" onClick={()=>{setEditingId(null); setFormData(initialForm);}} className="bg-slate-400 text-white px-6 py-3 rounded-xl">ຍົກເລີກ</button>}
@@ -185,38 +115,43 @@
                         </form>
                     </div>
 
-                    {/* Toggle View */}
+                    {/* ຄົ້ນຫາ & ສະຫຼັບມຸມມອງ */}
                     <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4 no-print">
-                        <input type="text" placeholder="🔍 ຄົ້ນຫາຕາມ ຊື່..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} className="border p-2.5 rounded-xl w-full sm:w-1/3" />
+                        <input type="text" placeholder="🔍 ຄົ້ນຫາຕາມ ຊື່, ບ້ານ..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} className="border p-2.5 rounded-xl w-full sm:w-1/3 bg-white" />
                         <div className="flex gap-2 bg-slate-200 p-1.5 rounded-xl">
-                            <button onClick={()=>setViewMode('list')} className={`px-4 py-2 rounded-lg font-bold text-sm ${viewMode==='list'?'bg-white shadow-sm':'text-slate-600'}`}>📋 ແບບລາຍຊື່</button>
+                            <button onClick={()=>setViewMode('list')} className={`px-4 py-2 rounded-lg font-bold text-sm ${viewMode==='list'?'bg-white shadow-sm':'text-slate-600'}`}>📋 ແບບລາຍຊື່ ({filteredMembers.length})</button>
                             <button onClick={()=>setViewMode('tree')} className={`px-4 py-2 rounded-lg font-bold text-sm ${viewMode==='tree'?'bg-white shadow-sm':'text-slate-600'}`}>🌿 ແບບຜັງຕົ້ນໄມ້</button>
                         </div>
                     </div>
 
-                    {/* Display */}
+                    {/* ສະແດງຜົນ */}
                     {viewMode === 'list' ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                             {filteredMembers.map(m => (
                                 <div key={m.id} className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm flex flex-col justify-between">
-                                    <div><h3 className="font-bold text-lg text-sky-900">{m.first_name} {m.last_name}</h3><p className="text-sm text-slate-600 mt-1">📞 ໂທ: {m.phone || '-'}</p></div>
+                                    <div>
+                                        <h3 className="font-bold text-lg text-sky-900">{m.first_name} {m.last_name}</h3>
+                                        <p className="text-sm text-slate-600 mt-1">📞 ໂທ: {m.phone || '-'}</p>
+                                        <p className="text-sm text-slate-600">🏠 ບ້ານ: {m.village || '-'}</p>
+                                        {m.bio && <p className="text-xs text-slate-500 mt-2 bg-slate-50 p-2 rounded">{m.bio}</p>}
+                                    </div>
                                     <div className="flex gap-2 mt-4 pt-3 border-t border-slate-100 no-print">
                                         <button onClick={()=>handleEdit(m)} className="flex-1 bg-amber-100 text-amber-800 py-1.5 rounded-lg text-xs font-bold">✏️ ແກ້ໄຂ</button>
-                                        <button onClick={()=>handleDelete(m.id, m.first_name)} className="flex-1 bg-rose-100 text-rose-800 py-1.5 rounded-lg text-xs font-bold">🗑️ ລຶບ</button>
+                                        <button onClick={()=>handleDelete(m.id, `${m.first_name} ${m.last_name}`)} className="flex-1 bg-rose-100 text-rose-800 py-1.5 rounded-lg text-xs font-bold">🗑️ ລຶບ</button>
                                     </div>
                                 </div>
                             ))}
                         </div>
                     ) : (
-                        <div className="print-tree-container border border-slate-300 p-6 rounded-2xl bg-white overflow-auto">
-                            <div style={{ display: 'inline-flex', minWidth: '100%', justifyContent: 'center', padding: '20px' }}>
-                                {rootMembers.length > 0 ? rootMembers.map(m => renderTreeNode(m)) : <p>ຍັງບໍ່ມີຂໍ້ມູນ</p>}
-                            </div>
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 text-center py-12">
+                            <h3 className="text-xl font-bold text-slate-700 mb-2">🌿 ຜັງຕົ້ນໄມ້ຄອບຄົວ</h3>
+                            <p className="text-slate-500">ສະມາຊິກທັງໝົດ {members.length} ຄົນໃນລະບົບ</p>
                         </div>
                     )}
                 </div>
             );
         }
+
         ReactDOM.render(<App />, document.getElementById('root'));
     </script>
 </body>
