@@ -12,20 +12,9 @@
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * { font-family: 'Phetsarath OT', 'Times New Roman', 'Noto Sans Lao', sans-serif !important; }
-        body { background-color: #f8fafc; color: #1e293b; margin: 0; padding: 0; font-size: 16px; }
+        * { font-family: 'Noto Sans Lao', 'Phetsarath OT', sans-serif !important; }
+        body { background-color: #f8fafc; color: #1e293b; margin: 0; padding: 0; }
         
-        /* ປັບຂະໜາດຟອນ ແລະ ຄວາມສົມສ່ວນສຳລັບມືຖື ແລະ ຄອມພິວເຕີ */
-        input, select, textarea, button {
-            font-size: 15px !important;
-        }
-
-        @media (max-width: 768px) {
-            body { font-size: 14px; }
-            .form-grid { grid-template-columns: 1fr !important; }
-            .main-container { padding: 10px !important; }
-        }
-
         @media print { 
             @page { size: landscape; margin: 10mm; } 
             .no-print { display: none !important; } 
@@ -40,6 +29,7 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
+        // ໂຄດປ່ຽນຮູບເປັນ Base64 ເພື່ອບັນທຶກເກັບໄວ້ໃນ LocalStorage ໄດ້ທັນທີໂດຍไม่ต้องຕໍ່ Server
         const fileToBase64 = (file) => new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.readAsDataURL(file);
@@ -78,6 +68,7 @@
           return 1;
         };
 
+        // --- Component: ໃບລາຍງານ ---
         const MemberReportCard = ({ member, allMembers = [], allActivities = [], user, onOpenActivityModal, lang }) => {
           const father = allMembers.find(m => m.id === member.father_id);
           const mother = allMembers.find(m => m.id === member.mother_id);
@@ -98,8 +89,8 @@
                 <h2 style={{ margin: 0, color: '#0369a1', fontSize: '20px', fontWeight: 'bold' }}>{currentHeaderTitle} (LAUJ KAUB NYAJ)</h2>
               </div>
 
-              <div style={{ display: 'flex', width: '100%', alignItems: 'flex-start', marginBottom: '8px', flexWrap: 'wrap' }}>
-                <div style={{ width: '4cm', minWidth: '4cm', height: '5.2cm', minHeight: '5.2cm', marginRight: '20px', marginBottom: '10px', background: '#fff', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', width: '100%', alignItems: 'flex-start', marginBottom: '8px' }}>
+                <div style={{ width: '4cm', minWidth: '4cm', height: '5.2cm', minHeight: '5.2cm', marginRight: '20px', background: '#fff', overflow: 'hidden' }}>
                   {member.photo_url ? (
                     <img src={member.photo_url} alt="Member" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                   ) : (
@@ -107,7 +98,7 @@
                   )}
                 </div>
 
-                <div style={{ flex: '1', minWidth: '250px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
+                <div style={{ flex: '1', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
                   <div style={rowStyle}><strong>ຊື່ ແລະ ນາມສະກຸນ:</strong> {member.first_name} {member.last_name}</div>
                   <div style={rowStyle}><strong>ຮຸ່ນ:</strong> P.{generationNumber}</div>
                   <div style={rowStyle}><strong>ວັນເກີດ:</strong> {formatDisplayDate(member.birth_date)}</div>
@@ -143,11 +134,11 @@
                 {memberActivities.length > 0 ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '10px' }}>
                     {memberActivities.map((act) => (
-                      <div key={act.id} style={{ display: 'flex', width: '100%', alignItems: 'flex-start', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', flexWrap: 'wrap' }}>
-                        <div style={{ width: '4cm', minWidth: '4cm', height: '5.2cm', minHeight: '5.2cm', marginRight: '20px', marginBottom: '10px', background: '#fff', overflow: 'hidden', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                      <div key={act.id} style={{ display: 'flex', width: '100%', alignItems: 'flex-start', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                        <div style={{ width: '4cm', minWidth: '4cm', height: '5.2cm', minHeight: '5.2cm', marginRight: '20px', background: '#fff', overflow: 'hidden', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
                           <img src={act.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                         </div>
-                        <div style={{ flex: '1', minWidth: '220px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
+                        <div style={{ flex: '1', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
                           <div style={rowStyle}><strong>ຫົວຂໍ້ກິດຈະກຳ:</strong> {act.title || '-'}</div>
                           <div style={rowStyle}><strong>ວັນທີ/ປີ ເຮັດກິດຈະກຳ:</strong> {act.activity_date || '-'}</div>
                           <div style={{ ...rowStyle, marginTop: '4px' }}><strong>ຄຳບັນຍາຍ / ເລົ່າເລື່ອງລາວ:</strong><div style={{ marginTop: '2px', lineHeight: '1.5', color: '#334155' }}>{act.description || '-'}</div></div>
@@ -164,7 +155,7 @@
         };
 
         const translations = {
-          lao: { login: 'ເຂົ້າສູ່ລະບົບ', username: 'ຊື່ຜູ້ໃຊ້', password: 'ລະຫັດຜ່ານ', title: 'ລະບົບຈັດການຂໍ້ມູນ & ຜັງຕະກຸນXIONG', userLabel: 'ຜູ້ໃຊ້', printAll: '📊 ພິມລາຍງານລວມທັງໝົດ', logout: 'ອອກຈາກລະບົບ', addMember: '👤 ເພີ່ມຂໍ້ມູນຍາດພີ່ນ້ອງໃໝ່', editMember: '📝 ແກ້ໄຂຂໍ້ມູນ', firstName: 'ຊື່', lastName: 'ນາມສະກຸນ', gender: 'ເພດ', selectGender: '-- ເລືອກເພດ --', male: 'ຊາຍ', female: 'ຍິງ', birthDate: 'ວັນເກີດ (ພິມ dd/mm/yyyy ຫຼື ປີ)', birthVillage: 'ບ້ານເກີດ', birthDistrict: 'ເມືອງເກີດ', birthProvince: 'ແຂວງເກີດ', spouse: 'ຜົວ / ເມຍ', selectSpouse: '-- ເລືອກຄູ່ສົມລົດ --', father: 'ພໍ່', selectFather: '-- ເລືອກພໍ່ --', mother: 'ແມ່', selectMother: '-- ເລືອກແມ່ --', village: 'ບ້ານຢູ່ປະຈຸບັນ', district: 'ເມືອງ', province: 'ແຂວງ', phone: 'ເບີໂທລະສັບ', selectPhoto: 'ເລືອກຮູບພາບ', bio: 'ປະຫວັດຫຍໍ້:', save: 'ບັນທຶກ', cancel: 'ຍົກເລີກ', searchPlaceholder: '🔍 ຄົ້ນຫາຕາມ ຊື່, ບ້ານ...', listView: '📋 ແບບລາຍຊື່', treeView: '🌿 ແບບຜັງຕົ້ນໄມ້', specificReport: '📄 ໃບລາຍງານສະເພາະ', backToHome: '⬅️ ກັບຄືນໜ້າຫຼັກ', printReport: '🖨️ ພິມໃບລາຍງານ', printTree: '🖨️ ພິມຜັງຕົ້ນໄມ້', successTitle: 'ສຳເລັດ', ok: 'ຕົກລົງ', yes: 'ຕົກລົງ (ລຶບ)' }
+          lao: { login: 'ເຂົ້າສູ່ລະບົບ', username: 'ຊື່ຜູ້ໃຊ້', password: 'ລະຫັດຜ່ານ', title: 'ລະບົບຈັດການຂໍ້ມູນ & ຜັງຕະກຸນXIONG', userLabel: 'ຜູ້ໃຊ້', printAll: '📊 ພິມລາຍງານລວມທັງໝົດ', logout: 'ອອກຈາກລະບົບ', addMember: '👤 ເພີ່ມຂໍ້ມູນຍາດພີ່ນ້ອງໃໝ່', editMember: '📝 ແກ້ໄຂຂໍ້ມູນ', firstName: 'ຊື່', lastName: 'ນາມສະກຸນ', gender: 'ເພດ', male: 'ຊາຍ', female: 'ຍິງ', birthDate: 'ວັນເກີດ (ພິມ dd/mm/yyyy ຫຼື ປີ)', birthVillage: 'ບ້ານເກີດ', birthDistrict: 'ເມືອງເກີດ', birthProvince: 'ແຂວງເກີດ', spouse: 'ຜົວ / ເມຍ', selectSpouse: '-- ເລືອກຄູ່ສົມລົດ --', father: 'ພໍ່', selectFather: '-- ເລືອກພໍ່ --', mother: 'ແມ່', selectMother: '-- ເລືອກແມ່ --', village: 'ບ້ານຢູ່ປະຈຸບັນ', district: 'ເມືອງ', province: 'ແຂວງ', phone: 'ເບີໂທລະສັບ', selectPhoto: 'ເລືອກຮູບພາບ', bio: 'ປະຫວັດຫຍໍ້:', save: 'ບັນທຶກ', cancel: 'ຍົກເລີກ', searchPlaceholder: '🔍 ຄົ້ນຫາຕາມ ຊື່, ບ້ານ...', listView: '📋 ແບບລາຍຊື່', treeView: '🌿 ແບບຜັງຕົ້ນໄມ້', specificReport: '📄 ໃບລາຍງານສະເພາະ', backToHome: '⬅️ ກັບຄືນໜ້າຫຼັກ', printReport: '🖨️ ພິມໃບລາຍງານ', printTree: '🖨️ ພິມຜັງຕົ້ນໄມ້', successTitle: 'ສຳເລັດ', ok: 'ຕົກລົງ', yes: 'ຕົກລົງ (ລຶບ)' }
         };
 
         const parseDateForServer = (inputDate) => {
@@ -188,6 +179,7 @@
           });
           const [loginForm, setLoginForm] = useState({ username: '', password: '' });
 
+          // ຖານຂໍ້ມູນເກັບໃນ LocalStorage (ເປີດຂຶ້ນມາໃຊ້ໄດ້ເລີຍ ບໍ່ຕ້ອງຕໍ່ Server)
           const [members, setMembers] = useState(() => {
               const saved = localStorage.getItem('xiong_local_members');
               return saved ? JSON.parse(saved) : [{ id: 1, first_name: 'ຕົ້ນຕະກຸນ', last_name: 'ຊົ່ງ', gender: 'Male', birth_date: '1900-01-01', village: '', district: '', province: '', photo_url: '', father_id: '', mother_id: '', spouse_id: '' }];
@@ -231,8 +223,7 @@
               setAuditLogs(prev => [newLog, ...prev].slice(0, 5)); 
           };
 
-          // 🟢 ປັບປຸງຄ່າເລີ່ມຕົ້ນຂອງ Form ໃຫ້ຊ່ອງຊື່, ນາມສະກຸນ ແລະ ເພດ ຫວ່າງເປົ່າ
-          const initialFormState = { first_name: '', last_name: '', gender: '', birth_date: '', birth_village: '', birth_district: '', birth_province: '', father_id: '', mother_id: '', spouse_id: '', village: '', district: '', province: '', bio: '', photo_url: '', phone: '', note: '' };
+          const initialFormState = { first_name: '', last_name: 'ຊົ່ງ', gender: 'Male', birth_date: '', birth_village: '', birth_district: '', birth_province: '', father_id: '', mother_id: '', spouse_id: '', village: '', district: '', province: '', bio: '', photo_url: '', phone: '', note: '' };
           const [formData, setFormData] = useState(initialFormState);
 
           const handleSaveBanner = () => {
@@ -244,6 +235,7 @@
 
           const handleLoginSubmit = (e) => {
             e.preventDefault();
+            // ລະບົບ Login ງ່າຍໆພາຍໃນໄຟລ໌ດຽວ (ຮັບທັງ Admin ແລະ User ຕາມທີ່ກຳນົດ)
             let role = 'USER';
             if (loginForm.username.includes('ADMIN') || loginForm.username === 'XIONG_ADMIN') {
                 role = 'ADMIN';
@@ -372,16 +364,16 @@
 
           const renderMemberCard = (member) => {
             const generationNumber = calculateGeneration(member, members);
-            const maleSilhouetteSvg = <svg viewBox="0 0 24 24" width="50" height="50" fill="#64748b" style={{ margin: 'auto' }}><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>;
-            const femaleSilhouetteSvg = <svg viewBox="0 0 24 24" width="50" height="50" fill="#64748b" style={{ margin: 'auto' }}><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v1h16v-1c0-2.66-5.33-4-8-4z"/></svg>;
+            const maleSilhouetteSvg = <svg viewBox="0 0 24 24" width="55" height="55" fill="#64748b" style={{ margin: 'auto' }}><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>;
+            const femaleSilhouetteSvg = <svg viewBox="0 0 24 24" width="55" height="55" fill="#64748b" style={{ margin: 'auto' }}><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v1h16v-1c0-2.66-5.33-4-8-4z"/></svg>;
 
             return (
-              <div key={member.id} style={{ border: `2px solid ${member.gender === 'Male' ? '#0284c7' : '#ec4899'}`, background: member.gender === 'Male' ? '#f0f9ff' : '#fdf2f8', borderRadius: '16px', padding: '12px 8px', width: '150px', textAlign: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.08)', flexShrink: 0, position: 'relative' }}>
+              <div key={member.id} style={{ border: `2px solid ${member.gender === 'Male' ? '#0284c7' : '#ec4899'}`, background: member.gender === 'Male' ? '#f0f9ff' : '#fdf2f8', borderRadius: '16px', padding: '14px 10px', width: '160px', textAlign: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.08)', flexShrink: 0, position: 'relative' }}>
                 <div style={{ position: 'absolute', top: '6px', right: '8px', background: member.gender === 'Male' ? '#0284c7' : '#ec4899', color: '#ffffff', fontSize: '11px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '6px', lineHeight: '1' }}>P.{generationNumber}</div>
-                <div style={{ width: '80px', height: '80px', borderRadius: '50%', overflow: 'hidden', margin: '0 auto 8px auto', background: '#e2e8f0', border: `2px solid ${member.gender === 'Male' ? '#bae6fd' : '#fbcfe8'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '90px', height: '90px', borderRadius: '50%', overflow: 'hidden', margin: '0 auto 8px auto', background: '#e2e8f0', border: `2px solid ${member.gender === 'Male' ? '#bae6fd' : '#fbcfe8'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {member.photo_url ? <img src={member.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (member.gender === 'Female' ? femaleSilhouetteSvg : maleSilhouetteSvg)}
                 </div>
-                <strong style={{ fontSize: '14px', color: member.gender === 'Male' ? '#0369a1' : '#be185d', display: 'block', lineHeight: '1.3' }}>{member.first_name} {member.last_name}</strong>
+                <strong style={{ fontSize: '15px', color: member.gender === 'Male' ? '#0369a1' : '#be185d', display: 'block', lineHeight: '1.4' }}>{member.first_name} {member.last_name}</strong>
               </div>
             );
           };
@@ -396,7 +388,7 @@
             let wives = member.gender === 'Female' ? [member, ...spouses.filter(s => s.gender === 'Female' && s.id !== member.id)] : spouses.filter(s => s.gender === 'Female');
 
             const wife1 = wives[0] || null; const wife2 = wives[1] || null;
-            const childrenWife1 = husband && wife1 ? members.filter(m => (m.father_id === husband.id && m.mother_id === wife1.id) || (m.father_id === husband.id && !m.mother_id && wife === spouses[0])).sort(compareAge) : [];
+            const childrenWife1 = husband && wife1 ? members.filter(m => (m.father_id === husband.id && m.mother_id === wife1.id) || (m.father_id === husband.id && !m.mother_id)).sort(compareAge) : [];
             const childrenWife2 = husband && wife2 ? members.filter(m => m.father_id === husband.id && m.mother_id === wife2.id).sort(compareAge) : [];
             const allChildren = [...childrenWife1, ...childrenWife2];
 
@@ -406,7 +398,7 @@
 
             return (
               <div key={member.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   {wives.length >= 2 ? (<>{renderMemberCard(wife1)}<div style={{ fontWeight: 'bold', color: '#ef4444', fontSize: '18px' }}>❤️</div>{husband ? renderMemberCard(husband) : renderMemberCard(member)}<div style={{ fontWeight: 'bold', color: '#ef4444', fontSize: '18px' }}>❤️</div>{renderMemberCard(wife2)}</>) : wives.length === 1 && husband && husband.id !== wives[0].id ? (<>{renderMemberCard(husband)}<div style={{ fontWeight: 'bold', color: '#ef4444', fontSize: '18px' }}>❤️</div>{renderMemberCard(wives[0])}</>) : (renderMemberCard(member))}
                 </div>
                 {targetChildren.length > 0 && (
@@ -419,8 +411,8 @@
                       </div>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
-                        <div style={{ position: 'absolute', top: 0, left: '75px', right: '75px', height: '3px', background: '#000000', zIndex: 1 }}></div>
-                        <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', position: 'relative', paddingTop: '18px', flexWrap: 'wrap' }}>
+                        <div style={{ position: 'absolute', top: 0, left: '80px', right: '80px', height: '3px', background: '#000000', zIndex: 1 }}></div>
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', position: 'relative', paddingTop: '18px' }}>
                           {targetChildren.map(child => (
                             <div key={child.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
                               <div style={{ position: 'absolute', top: '-18px', width: '3px', height: '18px', background: '#000000', zIndex: 2 }} />
@@ -440,8 +432,8 @@
 
           if (!user) {
             return (
-              <div translate="no" lang={lang} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f1f5f9', padding: '15px' }}>
-                <div style={{ background: 'white', padding: '30px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', width: '100%', maxWidth: '380px' }}>
+              <div translate="no" lang={lang} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f1f5f9', fontFamily: "'Noto Sans Lao', 'Phetsarath OT', sans-serif" }}>
+                <div style={{ background: 'white', padding: '35px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', width: '100%', maxWidth: '380px' }}>
                   <h2 style={{ textAlign: 'center', color: '#1e293b', marginTop: 0, marginBottom: '20px', fontWeight: 'bold', fontSize: '22px' }}>🌳 {t.login}</h2>
                   <form onSubmit={handleLoginSubmit}>
                     <div style={{ marginBottom: '15px' }}>
@@ -460,10 +452,10 @@
           }
 
           return (
-            <div className="main-container" translate="no" lang={lang} style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+            <div translate="no" lang={lang} style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto', fontFamily: "'Noto Sans Lao', 'Phetsarath OT', sans-serif" }}>
               {(emergencyBanner || user.role === 'ADMIN') && (
                 <div style={{ background: '#fef2f2', border: '2px solid #ef4444', borderRadius: '10px', padding: '15px 20px', marginBottom: '20px', boxShadow: '0 4px 10px rgba(239, 68, 68, 0.15)' }} className="no-print">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h3 style={{ margin: '0 0 5px 0', color: '#dc2626', fontSize: '17px', fontWeight: 'bold' }}>▲ ປະກາດຂ່າວສຸກເສີນ / ຄວາມສໍາຄັນດ່ວນ</h3>
                     {user.role === 'ADMIN' && (
                       <button onClick={() => setIsEditingBanner(!isEditingBanner)} style={{ background: '#ef4444', color: 'white', border: 'none', padding: '5px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>{isEditingBanner ? 'ຍົກເລີກ' : '✏️ ຈັດການປະກາດ'}</button>
@@ -479,8 +471,8 @@
               )}
 
               {activityModalMember && (
-                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '15px' }}>
-                  <div style={{ background: 'white', padding: '25px', borderRadius: '16px', width: '100%', maxWidth: '450px', boxSizing: 'border-box' }}>
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}>
+                  <div style={{ background: 'white', padding: '25px', borderRadius: '16px', width: '100%', maxWidth: '450px' }}>
                     <h3 style={{ margin: '0 0 15px 0', color: '#0369a1', fontSize: '18px', fontWeight: 'bold' }}>📸 ເພີ່ມຮູບກິດຈະກຳ: {activityModalMember.first_name}</h3>
                     <form onSubmit={handleActivitySubmit}>
                       <div style={{ marginBottom: '12px' }}><label style={labelStyle}>ເລືອກຮູບພາບກິດຈະກຳ:</label><input type="file" accept="image/*" required onChange={e => setActivityFile(e.target.files[0])} style={inputStyle} /></div>
@@ -497,8 +489,8 @@
               )}
 
               {modalConfig.isOpen && (
-                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '15px' }}>
-                  <div style={{ background: 'white', padding: '25px 30px', borderRadius: '16px', textAlign: 'center', width: '100%', maxWidth: '400px', boxSizing: 'border-box' }}>
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}>
+                  <div style={{ background: 'white', padding: '25px 30px', borderRadius: '16px', textAlign: 'center', width: '100%', maxWidth: '400px' }}>
                     <h3 style={{ margin: '0 0 10px 0', fontSize: '20px', fontWeight: 'bold' }}>{modalConfig.title}</h3>
                     <p style={{ margin: '0 0 20px 0', fontSize: '16px' }}>{modalConfig.message}</p>
                     <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
@@ -510,17 +502,17 @@
 
               {reportingMember ? (
                 <div style={{ marginBottom: '30px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }} className="no-print">
-                    <button onClick={() => setReportingMember(null)} style={{ background: '#64748b', color: 'white', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer' }}>⬅️ ກັບຄືນໜ້າຫຼັກ</button>
-                    <button onClick={() => window.print()} style={{ background: '#3b82f6', color: 'white', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer' }}>🖨️ ພິມໃບລາຍງານ</button>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }} className="no-print">
+                    <button onClick={() => setReportingMember(null)} style={{ background: '#64748b', color: 'white', padding: '8px 16px', borderRadius: '6px' }}>⬅️ ກັບຄືນໜ້າຫຼັກ</button>
+                    <button onClick={() => window.print()} style={{ background: '#3b82f6', color: 'white', padding: '8px 16px', borderRadius: '6px' }}>🖨️ ພິມໃບລາຍງານ</button>
                   </div>
                   <MemberReportCard member={reportingMember} allMembers={members} allActivities={allActivities} user={user} onOpenActivityModal={m => setActivityModalMember(m)} lang={lang} />
                 </div>
               ) : isFullReport ? (
                 <div style={{ marginBottom: '30px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }} className="no-print">
-                    <button onClick={() => setIsFullReport(false)} style={{ background: '#64748b', color: 'white', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer' }}>⬅️ ກັບຄືນໜ້າຫຼັກ</button>
-                    <button onClick={() => window.print()} style={{ background: '#0d9488', color: 'white', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer' }}>📊 ພິມລາຍງານລວມ</button>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }} className="no-print">
+                    <button onClick={() => setIsFullReport(false)} style={{ background: '#64748b', color: 'white', padding: '8px 16px', borderRadius: '6px' }}>⬅️ ກັບຄືນໜ້າຫຼັກ</button>
+                    <button onClick={() => window.print()} style={{ background: '#0d9488', color: 'white', padding: '8px 16px', borderRadius: '6px' }}>📊 ພິມລາຍງານລວມ</button>
                   </div>
                   <div>
                     {members.length > 0 ? members.map((m) => <MemberReportCard key={m.id} member={m} allMembers={members} allActivities={allActivities} user={user} onOpenActivityModal={mem => setActivityModalMember(mem)} lang={lang} />) : <p style={{ textAlign: 'center' }}>ຍັງບໍ່ມີຂໍ້ມູນ</p>}
@@ -528,9 +520,9 @@
                 </div>
               ) : (
                 <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', background: '#e2e8f0', padding: '12px 20px', borderRadius: '10px', flexWrap: 'wrap', gap: '10px' }} className="no-print">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', background: '#e2e8f0', padding: '12px 20px', borderRadius: '10px' }} className="no-print">
                     <div>👤 ຜູ້ໃຊ້: <strong>{user.username}</strong> | <span style={{ background: user.role === 'ADMIN' ? '#ef4444' : '#3b82f6', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '12px' }}>{user.role}</span></div>
-                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                       <button onClick={() => setIsFullReport(true)} style={{ background: '#0d9488', color: 'white', border: 'none', padding: '8px 14px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>📊 ພິມລາຍງານລວມ</button>
                       <button onClick={handleLogout} style={{ background: '#64748b', color: 'white', border: 'none', padding: '6px 14px', borderRadius: '6px', cursor: 'pointer' }}>ອອກຈາກລະບົບ</button>
                     </div>
@@ -551,17 +543,10 @@
 
                   <div style={{ background: editingId ? '#fefce8' : '#f8fafc', padding: '25px', borderRadius: '12px', border: `2px solid ${editingId ? '#eab308' : '#cbd5e1'}`, marginBottom: '30px' }} className="no-print">
                     <h2 style={{ fontSize: '18px', color: '#334155', marginTop: 0 }}>{editingId ? t.editMember : t.addMember}</h2>
-                    <form onSubmit={handleSubmit} className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                    <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                       <div><label style={labelStyle}>{t.firstName}</label><input type="text" required value={formData.first_name} onChange={e => setFormData({...formData, first_name: e.target.value})} style={inputStyle} /></div>
                       <div><label style={labelStyle}>{t.lastName}</label><input type="text" required value={formData.last_name} onChange={e => setFormData({...formData, last_name: e.target.value})} style={inputStyle} /></div>
-                      <div>
-                        <label style={labelStyle}>{t.gender}</label>
-                        <select required value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value})} style={inputStyle}>
-                          <option value="" disabled>{t.selectGender}</option>
-                          <option value="Male">{t.male}</option>
-                          <option value="Female">{t.female}</option>
-                        </select>
-                      </div>
+                      <div><label style={labelStyle}>{t.gender}</label><select value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value})} style={inputStyle}><option value="Male">{t.male}</option><option value="Female">{t.female}</option></select></div>
                       <div><label style={labelStyle}>{t.birthDate}</label><input type="text" placeholder="15/3/1973 ຫຼື 1973" value={formData.birth_date} onChange={e => setFormData({...formData, birth_date: e.target.value})} style={inputStyle} /></div>
                       
                       <div style={{ gridColumn: 'span 2' }}><label style={labelStyle}>💍 {t.spouse}:</label>
@@ -595,11 +580,11 @@
                     </form>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '15px', flexWrap: 'wrap' }} className="no-print">
-                    <input type="text" placeholder={t.searchPlaceholder} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{ flex: 1, minWidth: '200px', padding: '10px 15px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '15px' }} className="no-print">
+                    <input type="text" placeholder={t.searchPlaceholder} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{ flex: 1, padding: '10px 15px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
                     <div style={{ display: 'flex', gap: '5px', background: '#e2e8f0', padding: '4px', borderRadius: '8px' }}>
-                      <button onClick={() => setViewMode('list')} style={{ background: viewMode === 'list' ? 'white' : 'transparent', padding: '8px 15px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>📋 ລາຍຊື່ ({filteredMembers.length})</button>
-                      <button onClick={() => setViewMode('tree')} style={{ background: viewMode === 'tree' ? 'white' : 'transparent', padding: '8px 15px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>🌿 ຜັງຕົ້ນໄມ້</button>
+                      <button onClick={() => setViewMode('list')} style={{ background: viewMode === 'list' ? 'white' : 'transparent', padding: '8px 15px', borderRadius: '6px', fontWeight: 'bold' }}>📋 ລາຍຊື່ ({filteredMembers.length})</button>
+                      <button onClick={() => setViewMode('tree')} style={{ background: viewMode === 'tree' ? 'white' : 'transparent', padding: '8px 15px', borderRadius: '6px', fontWeight: 'bold' }}>🌿 ຜັງຕົ້ນໄມ້</button>
                     </div>
                   </div>
 
@@ -611,11 +596,11 @@
                             {member.photo_url ? <img src={member.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <span style={{ color: '#94a3b8' }}>ບໍ່ມີຮູບພາບ</span>}
                           </div>
                           <h3 style={{ margin: '0 0 8px 0', color: '#1d4ed8' }}>{member.first_name} {member.last_name}</h3>
-                          <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }} className="no-print">
-                            <button onClick={() => setReportingMember(member)} style={{ flex: 1, background: '#38bdf8', color: 'white', padding: '6px', borderRadius: '6px', cursor: 'pointer' }}>📄 ໃບລາຍງານ</button>
-                            {user.role === 'ADMIN' && <button onClick={() => setActivityModalMember(member)} style={{ background: '#e0e7ff', padding: '6px 8px', borderRadius: '6px', cursor: 'pointer' }} title="ເພີ່ມຮູບກິດຈະກຳ">📸</button>}
-                            {user.role === 'ADMIN' && <button onClick={() => handleEdit(member)} style={{ background: '#fef08a', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer' }}>✏️</button>}
-                            {user.role === 'ADMIN' && <button onClick={() => handleDelete(member.id, `${member.first_name} ${member.last_name}`)} style={{ background: '#fee2e2', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer' }}>🗑️</button>}
+                          <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }} className="no-print">
+                            <button onClick={() => setReportingMember(member)} style={{ flex: 1, background: '#38bdf8', color: 'white', padding: '6px', borderRadius: '6px' }}>📄 ໃບລາຍງານ</button>
+                            {user.role === 'ADMIN' && <button onClick={() => setActivityModalMember(member)} style={{ background: '#e0e7ff', padding: '6px 8px', borderRadius: '6px' }} title="ເພີ່ມຮູບກິດຈະກຳ">📸</button>}
+                            {user.role === 'ADMIN' && <button onClick={() => handleEdit(member)} style={{ background: '#fef08a', padding: '6px 10px', borderRadius: '6px' }}>✏️</button>}
+                            {user.role === 'ADMIN' && <button onClick={() => handleDelete(member.id, `${member.first_name} ${member.last_name}`)} style={{ background: '#fee2e2', padding: '6px 10px', borderRadius: '6px' }}>🗑️</button>}
                           </div>
                         </div>
                       ))}
@@ -634,7 +619,7 @@
         }
 
         const labelStyle = { display: 'block', marginBottom: '4px', fontWeight: '500', color: '#334155' };
-        const inputStyle = { width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '15px', boxSizing: 'border-box' };
+        const inputStyle = { width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box' };
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
