@@ -26,15 +26,60 @@
 <body>
     <div id="root"></div>
 
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+        import { getFirestore, collection, getDocs, setDoc, doc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDcHM2zgFajZEdP_LZhal7ioF4ZtNiXts",
+            authDomain: "posxiong-pos.firebaseapp.com",
+            projectId: "posxiong-pos",
+            storageBucket: "posxiong-pos.appspot.com",
+            messagingSenderId: "501328751337",
+            appId: "1:501328751337:web:5cb9f461c55341c5765e78",
+            measurementId: "G-G1PQJLKBG3"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        window.db = db;
+        window.FB = { collection, getDocs, setDoc, doc, deleteDoc, onSnapshot };
+        window.dispatchEvent(new Event('firebase-ready'));
+    </script>
+
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // ໂຄດປ່ຽນຮູບເປັນ Base64 ເພື່ອບັນທຶກເກັບໄວ້ໃນ LocalStorage ໄດ້ທັນທີໂດຍไม่ต้องຕໍ່ Server
-        const fileToBase64 = (file) => new Promise((resolve, reject) => {
+        // ລະບົບຫຍໍ້ຂະໜາດຮູບພາບອັດຕະໂນມັດ ປ້ອງກັນ Firebase Error (1MB Limit)
+        const processImage = (file) => new Promise((resolve, reject) => {
+            if (!file) return resolve('');
             const reader = new FileReader();
             reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = error => reject(error);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 600; // ຫຍໍ້ຄວາມກວ້າງສູງສຸດ
+                    const MAX_HEIGHT = 600; // ຫຍໍ້ຄວາມສູງສູງສຸດ
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+                    } else {
+                        if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    // ແປງເປັນ JPEG ແລະ ບີບອັດຄຸນນະພາບເຫຼືອ 70% ໃຫ້ຂະໜາດນ້ອຍລົງ (ປະມານ 50-100KB)
+                    resolve(canvas.toDataURL('image/jpeg', 0.7)); 
+                };
+                img.onerror = error => reject(error);
+            };
         });
 
         const formatDisplayDate = (dateStr) => {
@@ -178,22 +223,13 @@
           });
           const [loginForm, setLoginForm] = useState({ username: '', password: '' });
 
-          // ຖານຂໍ້ມູນເກັບໃນ LocalStorage ລ້ວນໆ 100%
-          const [members, setMembers] = useState(() => {
-              const saved = localStorage.getItem('xiong_local_members');
-              return saved ? JSON.parse(saved) : [{ id: 1, first_name: 'ຕົ້ນຕະກຸນ', last_name: 'ຊົ່ງ', gender: 'Male', birth_date: '1900-01-01', village: '', district: '', province: '', photo_url: '', father_id: '', mother_id: '', spouse_id: '' }];
-          });
-          const [allActivities, setAllActivities] = useState(() => {
-              const saved = localStorage.getItem('xiong_local_activities');
-              return saved ? JSON.parse(saved) : [];
-          });
-          const [auditLogs, setAuditLogs] = useState(() => {
-              const saved = localStorage.getItem('xiong_local_logs');
-              return saved ? JSON.parse(saved) : [];
-          });
-          const [emergencyBanner, setEmergencyBanner] = useState(() => localStorage.getItem('xiong_local_banner') || '');
+          const [members, setMembers] = useState([]);
+          const [allActivities, setAllActivities] = useState([]);
+          const [auditLogs, setAuditLogs] = useState([]);
+          const [emergencyBanner, setEmergencyBanner] = useState('');
+          
           const [isEditingBanner, setIsEditingBanner] = useState(false);
-          const [bannerInput, setBannerInput] = useState(emergencyBanner);
+          const [bannerInput, setBannerInput] = useState('');
 
           const [editingId, setEditingId] = useState(null);
           const [selectedFile, setSelectedFile] = useState(null);
@@ -208,26 +244,60 @@
 
           const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', onConfirm: null, isConfirm: false });
 
-          // ບັນທຶກລົງເຄື່ອງທຸກຄັ້ງທີ່ມີການປ່ຽນແປງ
-          useEffect(() => { localStorage.setItem('xiong_local_members', JSON.stringify(members)); }, [members]);
-          useEffect(() => { localStorage.setItem('xiong_local_activities', JSON.stringify(allActivities)); }, [allActivities]);
-          useEffect(() => { localStorage.setItem('xiong_local_logs', JSON.stringify(auditLogs)); }, [auditLogs]);
-          useEffect(() => { localStorage.setItem('xiong_local_banner', emergencyBanner); }, [emergencyBanner]);
+          // Firebase Realtime Sync
+          useEffect(() => {
+              const initFirebaseSync = () => {
+                  if (!window.db) return;
+                  const db = window.db;
+                  const { collection, onSnapshot } = window.FB;
+
+                  onSnapshot(collection(db, 'xiong_members'), (snapshot) => {
+                      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                      setMembers(list);
+                  });
+
+                  onSnapshot(collection(db, 'xiong_activities'), (snapshot) => {
+                      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                      setAllActivities(list);
+                  });
+
+                  onSnapshot(collection(db, 'xiong_logs'), (snapshot) => {
+                      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                      list.sort((a, b) => (b.created_at_ms || 0) - (a.created_at_ms || 0));
+                      setAuditLogs(list.slice(0, 5));
+                  });
+
+                  onSnapshot(collection(db, 'xiong_settings'), (snapshot) => {
+                      snapshot.forEach(doc => {
+                          if (doc.id === 'banner') {
+                              const val = doc.data().text || '';
+                              setEmergencyBanner(val);
+                              setBannerInput(val);
+                          }
+                      });
+                  });
+              };
+
+              if (window.db) { initFirebaseSync(); } else { window.addEventListener('firebase-ready', initFirebaseSync); }
+          }, []);
 
           const showAlert = (message, title = t.successTitle) => setModalConfig({ isOpen: true, title, message, isConfirm: false, onConfirm: null });
           const showConfirm = (message, onConfirm, title = t.successTitle) => setModalConfig({ isOpen: true, title, message, isConfirm: true, onConfirm });
           const closeModal = () => setModalConfig({ isOpen: false, title: '', message: '', onConfirm: null, isConfirm: false });
 
-          const addLog = (action_text) => {
-              const newLog = { id: Date.now(), action_text, created_at: new Date().toISOString(), username: user?.username || 'SYSTEM' };
-              setAuditLogs(prev => [newLog, ...prev].slice(0, 5)); 
+          const addLog = async (action_text) => {
+              if(!window.db) return;
+              const logId = String(Date.now());
+              const newLog = { id: logId, action_text, created_at: new Date().toISOString(), created_at_ms: Date.now(), username: user?.username || 'SYSTEM' };
+              await window.FB.setDoc(window.FB.doc(window.db, 'xiong_logs', logId), newLog);
           };
 
           const initialFormState = { first_name: '', last_name: '', gender: 'Male', birth_date: '', birth_village: '', birth_district: '', birth_province: '', father_id: '', mother_id: '', spouse_id: '', village: '', district: '', province: '', bio: '', photo_url: '', phone: '', note: '' };
           const [formData, setFormData] = useState(initialFormState);
 
-          const handleSaveBanner = () => {
-            setEmergencyBanner(bannerInput);
+          const handleSaveBanner = async () => {
+            if(!window.db) return;
+            await window.FB.setDoc(window.FB.doc(window.db, 'xiong_settings', 'banner'), { text: bannerInput });
             setIsEditingBanner(false);
             addLog('ອັບເດດປະກາດຂ່າວສຸກເສີນ');
             showAlert('ອັບເດດປະກາດຂ່າວສຸກເສີນສຳເລັດ!');
@@ -268,8 +338,8 @@
 
           const handleDelete = (id, name) => {
             if (user.role !== 'ADMIN') { showAlert('ສິດ USER ບໍ່ສາມາດລຶບຂໍ້ມູນໄດ້'); return; }
-            showConfirm(`ທ່ານຕ້ອງການລຶບຂໍ້ມູນຂອງ "${name}" ແທ້ບໍ?`, () => {
-              setMembers(members.filter(m => String(m.id) !== String(id)));
+            showConfirm(`ທ່ານຕ້ອງການລຶບຂໍ້ມູນຂອງ "${name}" ແທ້ບໍ?`, async () => {
+              if(window.db) { await window.FB.deleteDoc(window.FB.doc(window.db, 'xiong_members', String(id))); }
               addLog(`ລຶບຂໍ້ມູນ: ${name}`);
               showAlert('ລຶບຂໍ້ມູນສຳເລັດ!');
             });
@@ -277,11 +347,17 @@
 
           const handleSubmit = async (e) => {
             e.preventDefault();
+            
+            // ໃຊ້ລະບົບ Process Image ຫຍໍ້ຂະໜາດຮູບໃຫ້ເຫຼືອນ້ອຍລົງ ເພື່ອໃຫ້ Firebase ຮັບໄດ້
             let finalPhotoUrl = formData.photo_url;
-            if (selectedFile) finalPhotoUrl = await fileToBase64(selectedFile); 
+            if (selectedFile) {
+                finalPhotoUrl = await processImage(selectedFile); 
+            }
 
+            const memberId = editingId ? String(editingId) : String(Date.now());
             const newMem = { 
                 ...formData, 
+                id: memberId,
                 birth_date: parseDateForServer(formData.birth_date),
                 father_id: formData.father_id ? String(formData.father_id) : '',
                 mother_id: formData.mother_id ? String(formData.mother_id) : '',
@@ -289,37 +365,51 @@
                 photo_url: finalPhotoUrl
             };
 
-            if (editingId) {
-                setMembers(members.map(m => String(m.id) === String(editingId) ? { ...newMem, id: editingId } : m));
-                addLog(`ແກ້ໄຂຂໍ້ມູນຂອງ: ${newMem.first_name} ${newMem.last_name}`);
-                showAlert('ອັບເດດຂໍ້ມູນສຳເລັດ!');
-            } else {
-                newMem.id = Date.now();
-                setMembers([...members, newMem]);
-                addLog(`ເພີ່ມຂໍ້ມູນສະມາຊິກໃໝ່: ${newMem.first_name} ${newMem.last_name}`);
-                showAlert('ບັນທຶກຂໍ້ມູນສຳເລັດ!');
+            if (window.db) {
+                try {
+                    await window.FB.setDoc(window.FB.doc(window.db, 'xiong_members', memberId), newMem);
+                    if (editingId) {
+                        addLog(`ແກ້ໄຂຂໍ້ມູນຂອງ: ${newMem.first_name} ${newMem.last_name}`);
+                        showAlert('ອັບເດດຂໍ້ມູນສຳເລັດ!');
+                    } else {
+                        addLog(`ເພີ່ມຂໍ້ມູນສະມາຊິກໃໝ່: ${newMem.first_name} ${newMem.last_name}`);
+                        showAlert('ບັນທຶກຂໍ້ມູນສຳເລັດ!');
+                    }
+                    handleCancelEdit();
+                } catch (error) {
+                    console.error(error);
+                    showAlert('ຂໍອະໄພ! ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກ (ອາດຈະຮູບໃຫຍ່ເກີນໄປ)');
+                }
             }
-            handleCancelEdit();
           };
 
           const handleActivitySubmit = async (e) => {
             e.preventDefault();
             if (!activityFile) { showAlert('ກະລຸນາເລືອກຮູບພາບກິດຈະກຳ'); return; }
             
-            const b64 = await fileToBase64(activityFile);
+            // ໃຊ້ລະບົບ Process Image ເຊັ່ນດຽວກັນ
+            const b64 = await processImage(activityFile);
+            const actId = String(Date.now());
             const newAct = {
-                id: Date.now(),
-                member_id: activityModalMember.id,
+                id: actId,
+                member_id: String(activityModalMember.id),
                 photo_url: b64,
                 title: activityForm.title,
                 description: activityForm.description,
                 activity_date: activityForm.activity_date
             };
             
-            setAllActivities([...allActivities, newAct]);
-            addLog(`ເພີ່ມກິດຈະກຳໃຫ້: ${activityModalMember.first_name}`);
-            showAlert('ເພີ່ມຮູບກິດຈະກຳສຳເລັດແລ້ວ!');
-            setActivityModalMember(null); setActivityFile(null); setActivityForm({ title: '', description: '', activity_date: '' });
+            if (window.db) {
+                try {
+                    await window.FB.setDoc(window.FB.doc(window.db, 'xiong_activities', actId), newAct);
+                    addLog(`ເພີ່ມກິດຈະກຳໃຫ້: ${activityModalMember.first_name}`);
+                    showAlert('ເພີ່ມຮູບກິດຈະກຳສຳເລັດແລ້ວ!');
+                    setActivityModalMember(null); setActivityFile(null); setActivityForm({ title: '', description: '', activity_date: '' });
+                } catch (error) {
+                    console.error(error);
+                    showAlert('ຂໍອະໄພ! ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກຮູບກິດຈະກຳ');
+                }
+            }
           };
 
           const compareAge = (a, b) => {
@@ -551,21 +641,21 @@
                       <div style={{ gridColumn: 'span 2' }}><label style={labelStyle}>💍 {t.spouse}:</label>
                         <select value={formData.spouse_id} onChange={e => setFormData({...formData, spouse_id: e.target.value})} style={inputStyle}>
                           <option value="">{t.selectSpouse}</option>
-                          {members.filter(m => m.id !== editingId).map(m => <option key={m.id} value={m.id}>{m.first_name} {m.last_name}</option>)}
+                          {members.filter(m => String(m.id) !== String(editingId)).map(m => <option key={m.id} value={m.id}>{m.first_name} {m.last_name}</option>)}
                         </select>
                       </div>
 
                       <div><label style={labelStyle}>{t.father}:</label>
                         <select value={formData.father_id} onChange={e => setFormData({...formData, father_id: e.target.value})} style={inputStyle}>
                           <option value="">{t.selectFather}</option>
-                          {members.filter(m => m.gender === 'Male' && m.id !== editingId).map(m => <option key={m.id} value={m.id}>{m.first_name}</option>)}
+                          {members.filter(m => m.gender === 'Male' && String(m.id) !== String(editingId)).map(m => <option key={m.id} value={m.id}>{m.first_name}</option>)}
                         </select>
                       </div>
 
                       <div><label style={labelStyle}>{t.mother}:</label>
                         <select value={formData.mother_id} onChange={e => setFormData({...formData, mother_id: e.target.value})} style={inputStyle}>
                           <option value="">{t.selectMother}</option>
-                          {members.filter(m => m.gender === 'Female' && m.id !== editingId).map(m => <option key={m.id} value={m.id}>{m.first_name}</option>)}
+                          {members.filter(m => m.gender === 'Female' && String(m.id) !== String(editingId)).map(m => <option key={m.id} value={m.id}>{m.first_name}</option>)}
                         </select>
                       </div>
 
