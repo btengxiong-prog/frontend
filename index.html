@@ -254,6 +254,8 @@
           // 🟢 Login ກັບ API ຫຼັງບ້ານ
           const handleLoginSubmit = async (e) => {
             e.preventDefault();
+            console.log("ກຳລັງສົ່ງຂໍ້ມູນໄປທີ່:", `${API_URL}/api/login`); // ເບິ່ງວ່າ URL ຖືກຕ້ອງບໍ
+            
             try {
                 const res = await fetch(`${API_URL}/api/login`, {
                     method: 'POST',
@@ -262,15 +264,13 @@
                 });
                 const data = await res.json();
                 
+                console.log("ຜົນລັບຈາກ Server:", data); // ເບິ່ງ Response ທີ່ໄດ້ຮັບ
+                
                 if (!res.ok) throw new Error(data.error);
 
-                localStorage.setItem('family_tree_user', data.username);
-                localStorage.setItem('family_tree_role', data.role);
-                localStorage.setItem('family_tree_token', data.token);
-                
-                setUser({ username: data.username, role: data.role, token: data.token });
-                setLoginForm({ username: '', password: '' });
+                // ... ຈັດການ Login ສຳເລັດ ...
             } catch (err) {
+                console.error("ເກີດข้อຜິດພາດ:", err);
                 showAlert(err.message, 'ຜິດພາດ');
             }
           };
