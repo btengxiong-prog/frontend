@@ -370,34 +370,65 @@
 
           const renderMemberCard = (member) => {
             const generationNumber = calculateGeneration(member, members);
-            const maleSilhouetteSvg = <svg viewBox="0 0 24 24" width="50" height="50" fill="#64748b" style={{ margin: 'auto' }}><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>;
-            const femaleSilhouetteSvg = <svg viewBox="0 0 24 24" width="50" height="50" fill="#64748b" style={{ margin: 'auto' }}><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v1h16v-1c0-2.66-5.33-4-8-4z"/></svg>;
+            const maleSilhouetteSvg = <svg viewBox="0 0 24 24" width="45" height="45" fill="#64748b" style={{ margin: 'auto' }}><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>;
+            const femaleSilhouetteSvg = <svg viewBox="0 0 24 24" width="45" height="45" fill="#64748b" style={{ margin: 'auto' }}><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v1h16v-1c0-2.66-5.33-4-8-4z"/></svg>;
 
             return (
-              <div key={member.id} style={{ border: `2px solid ${member.gender === 'Male' ? '#0284c7' : '#ec4899'}`, background: member.gender === 'Male' ? '#f0f9ff' : '#fdf2f8', borderRadius: '16px', padding: '12px 8px', width: '150px', textAlign: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.08)', flexShrink: 0, position: 'relative' }}>
-                <div style={{ position: 'absolute', top: '6px', right: '8px', background: member.gender === 'Male' ? '#0284c7' : '#ec4899', color: '#ffffff', fontSize: '11px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '6px', lineHeight: '1' }}>P.{generationNumber}</div>
-                <div style={{ width: '80px', height: '80px', borderRadius: '50%', overflow: 'hidden', margin: '0 auto 8px auto', background: '#e2e8f0', border: `2px solid ${member.gender === 'Male' ? '#bae6fd' : '#fbcfe8'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div key={member.id} style={{ border: `2px solid ${member.gender === 'Male' ? '#0284c7' : '#ec4899'}`, background: member.gender === 'Male' ? '#f0f9ff' : '#fdf2f8', borderRadius: '14px', padding: '10px 6px', width: '135px', textAlign: 'center', boxShadow: '0 3px 5px rgba(0,0,0,0.08)', flexShrink: 0, position: 'relative' }}>
+                <div style={{ position: 'absolute', top: '5px', right: '6px', background: member.gender === 'Male' ? '#0284c7' : '#ec4899', color: '#ffffff', fontSize: '10px', fontWeight: 'bold', padding: '2px 5px', borderRadius: '4px', lineHeight: '1' }}>P.{generationNumber}</div>
+                <div style={{ width: '70px', height: '70px', borderRadius: '50%', overflow: 'hidden', margin: '0 auto 6px auto', background: '#e2e8f0', border: `2px solid ${member.gender === 'Male' ? '#bae6fd' : '#fbcfe8'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {member.photo_url ? <img src={member.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (member.gender === 'Female' ? femaleSilhouetteSvg : maleSilhouetteSvg)}
                 </div>
-                <strong style={{ fontSize: '14px', color: member.gender === 'Male' ? '#0369a1' : '#be185d', display: 'block', lineHeight: '1.3' }}>{member.first_name} {member.last_name}</strong>
+                <strong style={{ fontSize: '13px', color: member.gender === 'Male' ? '#0369a1' : '#be185d', display: 'block', lineHeight: '1.3' }}>{member.first_name} {member.last_name}</strong>
               </div>
             );
           };
 
-          // 🟢 ປັບປຸງລະບົບ Render Tree ໃຫ້ສະແດງຜົນໄດ້ຢ່າງປອດໄພ 100% ບໍ່ມີຕິດຂັດ
-          const renderTreeNode = (member, renderedSet = new Set()) => {
-            if (!member || renderedSet.has(member.id)) return null;
-            renderedSet.add(member.id);
+          // 🟢 ປັບປຸງລະບົບແຕ້ມຜັງຕົ້ນໄມ້ແບບຄອບຄົວ (ສະແດງຜົວ-ເມຍ ຄູ່ກັນ ແລະ ລາກເສັ້ນຫາລູກ)
+          const renderTreeNode = (person, renderedSet = new Set()) => {
+            if (!person || renderedSet.has(person.id)) return null;
+            renderedSet.add(person.id);
 
-            const children = members.filter(m => m.father_id === member.id || m.mother_id === member.id).sort(compareAge);
+            // ຊອກຫາຄູ່ສົມລົດ (ຜົວ ຫຼື ເມຍ)
+            const spouses = members.filter(m => (m.id === person.spouse_id || person.id === m.spouse_id) && m.id !== person.id).sort(compareAge);
+            spouses.forEach(s => renderedSet.add(s.id));
+
+            // จัดກຸ່ມ ຜົວ ແລະ ເມຍ
+            let husband = person.gender === 'Male' ? person : (spouses.find(s => s.gender === 'Male') || null);
+            let wife = person.gender === 'Female' ? person : (spouses.find(s => s.gender === 'Female') || null);
+            if (!husband && !wife) husband = person;
+
+            // ຊອກຫາລູກໆຂອງຄູ່ນີ້
+            const fatherId = husband ? husband.id : null;
+            const motherId = wife ? wife.id : null;
+            
+            const children = members.filter(m => {
+              if (fatherId && motherId) return m.father_id === fatherId && m.mother_id === motherId;
+              if (fatherId) return m.father_id === fatherId;
+              if (motherId) return m.mother_id === motherId;
+              return false;
+            }).sort(compareAge);
 
             return (
-              <div key={member.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', margin: '0 10px' }}>
-                {renderMemberCard(member)}
+              <div key={person.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', margin: '10px 15px' }}>
+                {/* ບລັອກສະແດງຜົວ-ເມຍ ຢືນຄູ່ກัน */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#ffffff', padding: '8px 12px', borderRadius: '16px', border: '1px solid #cbd5e1', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                  {husband && renderMemberCard(husband)}
+                  {husband && wife && <span style={{ fontSize: '18px', color: '#ef4444', fontWeight: 'bold' }}>❤️</span>}
+                  {wife && !husband && renderMemberCard(wife)}
+                  {husband && spouses.length > 0 && spouses.filter(s => s.gender === 'Female' && s.id !== wife?.id).map(extraWife => (
+                     <React.Fragment key={extraWife.id}>
+                        <span style={{ fontSize: '18px', color: '#ef4444', fontWeight: 'bold' }}>❤️</span>
+                        {renderMemberCard(extraWife)}
+                     </React.Fragment>
+                  ))}
+                </div>
+
+                {/* ເສັ້ນລົງໄປຫາລູກ */}
                 {children.length > 0 && (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
-                    <div style={{ width: '3px', height: '22px', background: '#000000' }}></div>
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', position: 'relative', paddingTop: '10px', flexWrap: 'wrap' }}>
+                    <div style={{ width: '3px', height: '24px', background: '#0284c7' }}></div>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', position: 'relative', paddingTop: '10px', flexWrap: 'wrap' }}>
                       {children.map(child => renderTreeNode(child, renderedSet))}
                     </div>
                   </div>
@@ -406,7 +437,8 @@
             );
           };
 
-          let rootMembers = members.filter(m => !m.father_id && !m.mother_id).sort(compareAge);
+          // ຫາຄົນລຸ້ນຕົ້ນຕະກຸນ (Root) ເພື່ອເລີ່ມແຕ້ມ
+          let rootMembers = members.filter(m => !m.father_id && !m.mother_id && (m.gender === 'Male' || !m.spouse_id)).sort(compareAge);
           if (rootMembers.length === 0 && members.length > 0) {
               rootMembers = [members[0]];
           }
