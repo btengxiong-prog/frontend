@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="lo">
+<html lang="lo" translate="no">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,9 +8,14 @@
     <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * { font-family: 'Noto Sans Lao', sans-serif; }
+        * { font-family: 'Noto Sans Lao', 'Phetsarath OT', sans-serif !important; }
+        @media print { 
+            @page { size: landscape; margin: 10mm; } 
+            .no-print { display: none !important; } 
+            body { background: white; margin: 0; padding: 0; } 
+        }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800">
@@ -18,141 +23,131 @@
 
     <script type="text/babel">
         function App() {
+            // ດຶງຂໍ້ມູນຈາກ localStorage ມາໃຊ້ຮັກສາຂໍ້ມູນເກົ່າທັງໝົດໄວ້
             const [members, setMembers] = React.useState(() => {
-                const saved = localStorage.getItem('xiong_family_members');
+                const saved = localStorage.getItem('xiong_family_all_members');
                 return saved ? JSON.parse(saved) : [
-                    { id: 1, first_name: 'ຊົ່ງຊົ່ວ', last_name: 'ຊົ່ງ', gender: 'Male', birth_date: '1950', phone: '02055551234', village: 'ວຽງຈັນ', bio: 'ຜູ້ນຳຸ່ນທຳອິດ' }
+                    { id: 1, first_name: 'ຊົ່ງຊົ່ວ', last_name: 'ຊົ່ງ', gender: 'Male', birth_date: '1950-01-01', village: 'ວຽງຈັນ', district: 'ຈັນທະບູລີ', province: 'ວຽງຈັນ', phone: '02055551234', bio: 'ຜູ້ນຳຸ່ນທຳອິດ' }
                 ];
             });
 
-            const [form, setForm] = React.useState({ 
-                first_name: '', last_name: '', gender: 'Male', birth_date: '', 
-                village: '', district: '', province: '', phone: '', bio: '' 
+            const [user, setUser] = React.useState(() => {
+                const savedUser = localStorage.getItem('family_tree_user');
+                const savedRole = localStorage.getItem('family_tree_role');
+                return savedUser ? { username: savedUser, role: savedRole } : { username: 'XIONG_ADMIN', role: 'ADMIN' };
             });
-            const [search, setSearch] = React.useState('');
+
+            const [viewMode, setViewMode] = React.useState('list');
+            const [searchTerm, setSearchTerm] = React.useState('');
+            const [reportingMember, setReportingMember] = React.useState(null);
             const [editingId, setEditingId] = React.useState(null);
 
+            const initialForm = {
+                first_name: '', last_name: '', gender: 'Male', birth_date: '',
+                birth_village: '', birth_district: '', birth_province: '',
+                father_id: '', mother_id: '', spouse_id: '',
+                village: '', district: '', province: '', phone: '', bio: '', note: ''
+            };
+
+            const [formData, setFormData] = React.useState(initialForm);
+
             React.useEffect(() => {
-                localStorage.setItem('xiong_family_members', JSON.stringify(members));
+                localStorage.setItem('xiong_family_all_members', JSON.stringify(members));
             }, [members]);
 
             const handleSubmit = (e) => {
                 e.preventDefault();
-                if (!form.first_name) return;
-
                 if (editingId) {
-                    setMembers(members.map(m => m.id === editingId ? { ...form, id: editingId } : m));
+                    setMembers(members.map(m => m.id === editingId ? { ...formData, id: editingId } : m));
                     setEditingId(null);
                     alert('ອັບເດດຂໍ້ມູນສຳເລັດ!');
                 } else {
-                    const newMember = { ...form, id: Date.now() };
-                    setMembers([...members, newMember]);
-                    alert('ເພີ່ມຂໍ້ມູນຍາດພີ່ນ້ອງສຳເລັດ!');
+                    const newMem = { ...formData, id: Date.now() };
+                    setMembers([...members, newMem]);
+                    alert('ບັນທຶກຂໍ້ມູນສຳເລັດ!');
                 }
-
-                setForm({ first_name: '', last_name: '', gender: 'Male', birth_date: '', village: '', district: '', province: '', phone: '', bio: '' });
+                setFormData(initialForm);
             };
 
             const handleEdit = (member) => {
                 setEditingId(member.id);
-                setForm(member);
+                setFormData(member);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             };
 
-            const handleDelete = (id) => {
-                if (confirm('ທ່ານຕ້ອງການລຶບຂໍ້ມູນນີ້ແທ້ບໍ?')) {
+            const handleDelete = (id, name) => {
+                if (confirm(`ທ່ານຕ້ອງການລຶບຂໍ້ມູນຂອງ "${name}" ແທ້ບໍ?`)) {
                     setMembers(members.filter(m => m.id !== id));
                 }
             };
 
-            const filtered = members.filter(m => {
-                const text = `${m.first_name || ''} ${m.last_name || ''} ${m.village || ''} ${m.district || ''}`.toLowerCase();
-                return text.includes(search.toLowerCase());
+            const filteredMembers = members.filter(m => {
+                const fullName = `${m.first_name || ''} ${m.last_name || ''}`.toLowerCase();
+                const location = `${m.village || ''} ${m.district || ''} ${m.province || ''}`.toLowerCase();
+                return fullName.includes(searchTerm.toLowerCase()) || location.includes(searchTerm.toLowerCase());
             });
 
             return (
-                <div className="max-w-4xl mx-auto p-4">
-                    <header className="bg-sky-700 text-white p-5 rounded-2xl shadow-md mb-6 text-center">
-                        <h1 className="text-2xl font-bold">🌳 ລະບົບຈັດການຜັງຕະກຸນ XIONG (Family Tree)</h1>
-                        <p className="text-sm opacity-90 mt-1">ເກັບຂໍ້ມູນປອດໄภัยໃນເຄື່ອງ (LocalStorage) 100% ບໍ່ມີວັນຫຼຸດ ບໍ່ມີວັນຖືກບລັອກໃນ ສປປ ລາວ</p>
-                    </header>
+                <div className="max-w-6xl mx-auto p-4 md:p-6">
+                    {/* Header */}
+                    <div className="flex justify-between items-center mb-6 bg-white p-4 rounded-xl shadow-sm border border-slate-200 no-print">
+                        <div>👤 ຜູ້ໃຊ້: <strong>{user.username}</strong> | <span className="bg-red-500 text-white px-2 py-0.5 rounded-full text-xs font-bold">{user.role}</span></div>
+                        <button onClick={() => { localStorage.clear(); location.reload(); }} className="bg-slate-500 text-white px-3 py-1 rounded-lg text-sm font-bold">ອອກຈາກລະບົບ</button>
+                    </div>
 
-                    {/* Form ເພີ່ມ / ແກ້ໄຂຂໍ້ມູນ */}
-                    <div className="bg-white p-6 rounded-2xl shadow-md mb-6 border border-slate-200">
-                        <h2 className="text-lg font-bold text-sky-800 mb-4">
-                            {editingId ? '📝 ແກ້ໄຂຂໍ້ມູນຍາດພີ່ນ້ອງ' : '👤 ເພີ່ມຂໍ້ມູນຍາດພີ່ນ້ອງໃໝ່'}
-                        </h2>
+                    <h1 className="text-2xl md:text-3xl font-bold text-slate-800 mb-6 text-center">🌳 ລະບົບຈັດການຂໍ້ມູນ & ຜັງຕະກຸນ XIONG</h1>
+
+                    {/* Form ເພີ່ມ/ແກ້ໄຂ */}
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8 no-print">
+                        <h2 className="text-lg font-bold text-sky-800 mb-4">{editingId ? '📝 ແກ້ໄຂຂໍ້ມູນ' : '👤 ເພີ່ມຂໍ້ມູນຍາດພີ່ນ້ອງໃໝ່'}</h2>
                         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium mb-1">ຊື່</label>
-                                <input type="text" placeholder="ພິມຊື່..." value={form.first_name} onChange={e=>setForm({...form, first_name: e.target.value})} className="border p-2.5 rounded-lg w-full" required />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-1">ນາມສະກຸນ</label>
-                                <input type="text" placeholder="ພິມນາມສະກຸນ..." value={form.last_name} onChange={e=>setForm({...form, last_name: e.target.value})} className="border p-2.5 rounded-lg w-full" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-1">ເພດ</label>
-                                <select value={form.gender} onChange={e=>setForm({...form, gender: e.target.value})} className="border p-2.5 rounded-lg w-full">
-                                    <option value="Male">ຊາຍ</option>
-                                    <option value="Female">ຍິງ</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-1">ວັນ/ປີເກີດ</label>
-                                <input type="text" placeholder="ເຊັ່ນ: 15/05/1975 ຫລື 1975" value={form.birth_date} onChange={e=>setForm({...form, birth_date: e.target.value})} className="border p-2.5 rounded-lg w-full" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-1">ບ້ານຢູ່ປະຈຸບັນ</label>
-                                <input type="text" placeholder="ຊື່ບ້ານ..." value={form.village} onChange={e=>setForm({...form, village: e.target.value})} className="border p-2.5 rounded-lg w-full" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-1">ເບີໂທລະສັບ</label>
-                                <input type="text" placeholder="ເຊັ່ນ: 020 55551234" value={form.phone} onChange={e=>setForm({...form, phone: e.target.value})} className="border p-2.5 rounded-lg w-full" />
-                            </div>
-                            <div className="md:col-span-2">
-                                <label className="block text-sm font-medium mb-1">ປະຫວັດຫຍໍ້ / ຂໍ້ມູນເພີ່ມເຕີມ</label>
-                                <textarea placeholder="ພິມປະຫວັດ..." value={form.bio} onChange={e=>setForm({...form, bio: e.target.value})} className="border p-2.5 rounded-lg w-full h-20"></textarea>
-                            </div>
-                            <div className="md:col-span-2 flex gap-3">
-                                <button type="submit" className="flex-1 bg-teal-600 text-white font-bold p-3 rounded-xl hover:bg-teal-700 transition">💾 ບັນທຶກຂໍ້ມູນ</button>
-                                {editingId && (
-                                    <button type="button" onClick={() => { setEditingId(null); setForm({ first_name: '', last_name: '', gender: 'Male', birth_date: '', village: '', district: '', province: '', phone: '', bio: '' }); }} className="bg-slate-400 text-white font-bold px-6 py-3 rounded-xl hover:bg-slate-500 transition">ຍົກເລີກ</button>
-                                )}
+                            <div><label className="block text-sm font-medium mb-1">ຊື່</label><input type="text" required value={formData.first_name} onChange={e=>setFormData({...formData, first_name: e.target.value})} className="border p-2.5 rounded-xl w-full" /></div>
+                            <div><label className="block text-sm font-medium mb-1">ນາມສະກຸນ</label><input type="text" required value={formData.last_name} onChange={e=>setFormData({...formData, last_name: e.target.value})} className="border p-2.5 rounded-xl w-full" /></div>
+                            <div><label className="block text-sm font-medium mb-1">ເພດ</label><select value={formData.gender} onChange={e=>setFormData({...formData, gender: e.target.value})} className="border p-2.5 rounded-xl w-full"><option value="Male">ຊາຍ</option><option value="Female">ຍິງ</option></select></div>
+                            <div><label className="block text-sm font-medium mb-1">ວັນເກີດ (ປີ/ວັນທີ)</label><input type="text" placeholder="ເຊັ່ນ: 1975" value={formData.birth_date} onChange={e=>setFormData({...formData, birth_date: e.target.value})} className="border p-2.5 rounded-xl w-full" /></div>
+                            <div><label className="block text-sm font-medium mb-1">ບ້ານຢູ່ປະຈຸບັນ</label><input type="text" value={formData.village} onChange={e=>setFormData({...formData, village: e.target.value})} className="border p-2.5 rounded-xl w-full" /></div>
+                            <div><label className="block text-sm font-medium mb-1">ເບີໂທລະສັບ</label><input type="text" value={formData.phone} onChange={e=>setFormData({...formData, phone: e.target.value})} className="border p-2.5 rounded-xl w-full" /></div>
+                            <div className="md:col-span-2"><label className="block text-sm font-medium mb-1">ປະຫວັດຫຍໍ້:</label><textarea value={formData.bio} onChange={e=>setFormData({...formData, bio: e.target.value})} className="border p-2.5 rounded-xl w-full h-20"></textarea></div>
+                            <div className="md:col-span-2 flex gap-2">
+                                <button type="submit" className="flex-1 bg-teal-600 text-white font-bold p-3 rounded-xl hover:bg-teal-700">💾 ບັນທຶກ</button>
+                                {editingId && <button type="button" onClick={()=>{setEditingId(null); setFormData(initialForm);}} className="bg-slate-400 text-white px-6 py-3 rounded-xl">ຍົກເລີກ</button>}
                             </div>
                         </form>
                     </div>
 
-                    {/* ຊ່ອງຄົ້ນຫາ ແລະ ລາຍຊື່ສະມາຊິກ */}
-                    <div className="bg-white p-6 rounded-2xl shadow-md border border-slate-200">
-                        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-                            <h2 className="text-lg font-bold text-sky-800">📋 ລາຍຊື່ຍາດພີ່ນ້ອງທັງໝົດ ({filtered.length})</h2>
-                            <input type="text" placeholder="🔍 ค้นหาຊື່, ບ້ານ..." value={search} onChange={e=>setSearch(e.target.value)} className="border p-2.5 rounded-xl w-full sm:w-1/3 text-sm" />
+                    {/* ຄົ້ນຫາ & ສະຫຼັບມຸມມອງ */}
+                    <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4 no-print">
+                        <input type="text" placeholder="🔍 ຄົ້ນຫາຕາມ ຊື່, ບ້ານ..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} className="border p-2.5 rounded-xl w-full sm:w-1/3 bg-white" />
+                        <div className="flex gap-2 bg-slate-200 p-1.5 rounded-xl">
+                            <button onClick={()=>setViewMode('list')} className={`px-4 py-2 rounded-lg font-bold text-sm ${viewMode==='list'?'bg-white shadow-sm':'text-slate-600'}`}>📋 ແບບລາຍຊື່ ({filteredMembers.length})</button>
+                            <button onClick={()=>setViewMode('tree')} className={`px-4 py-2 rounded-lg font-bold text-sm ${viewMode==='tree'?'bg-white shadow-sm':'text-slate-600'}`}>🌿 ແບບຜັງຕົ້ນໄມ້</button>
                         </div>
+                    </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {filtered.map(m => (
-                                <div key={m.id} className="border border-slate-200 p-4 rounded-xl shadow-sm bg-slate-50 flex justify-between items-start">
+                    {/* ສະແດງຜົນ */}
+                    {viewMode === 'list' ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                            {filteredMembers.map(m => (
+                                <div key={m.id} className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm flex flex-col justify-between">
                                     <div>
-                                        <h3 className="font-bold text-sky-900 text-lg">
-                                            {m.first_name} {m.last_name} 
-                                            <span className={`text-xs ml-2 px-2 py-0.5 rounded-full ${m.gender === 'Male' ? 'bg-sky-100 text-sky-700' : 'bg-pink-100 text-pink-700'}`}>
-                                                {m.gender === 'Male' ? 'ຊາຍ' : 'ຍິງ'}
-                                            </span>
-                                        </h3>
-                                        <p className="text-sm text-slate-600 mt-1">📅 ປີເກີດ: {m.birth_date || '-'}</p>
-                                        <p className="text-sm text-slate-600">📞 ໂທ: {m.phone || '-'}</p>
+                                        <h3 className="font-bold text-lg text-sky-900">{m.first_name} {m.last_name}</h3>
+                                        <p className="text-sm text-slate-600 mt-1">📞 ໂທ: {m.phone || '-'}</p>
                                         <p className="text-sm text-slate-600">🏠 ບ້ານ: {m.village || '-'}</p>
-                                        {m.bio && <p className="text-xs text-slate-500 mt-2 bg-white p-2 rounded border">ℹ️ {m.bio}</p>}
+                                        {m.bio && <p className="text-xs text-slate-500 mt-2 bg-slate-50 p-2 rounded">{m.bio}</p>}
                                     </div>
-                                    <div className="flex flex-col gap-1">
-                                        <button onClick={() => handleEdit(m)} className="bg-amber-100 text-amber-700 p-2 rounded-lg text-xs font-bold hover:bg-amber-200">✏️</button>
-                                        <button onClick={() => handleDelete(m.id)} className="bg-rose-100 text-rose-700 p-2 rounded-lg text-xs font-bold hover:bg-rose-200">🗑️</button>
+                                    <div className="flex gap-2 mt-4 pt-3 border-t border-slate-100 no-print">
+                                        <button onClick={()=>handleEdit(m)} className="flex-1 bg-amber-100 text-amber-800 py-1.5 rounded-lg text-xs font-bold">✏️ ແກ້ໄຂ</button>
+                                        <button onClick={()=>handleDelete(m.id, `${m.first_name} ${m.last_name}`)} className="flex-1 bg-rose-100 text-rose-800 py-1.5 rounded-lg text-xs font-bold">🗑️ ລຶບ</button>
                                     </div>
                                 </div>
                             ))}
                         </div>
-                    </div>
+                    ) : (
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 text-center py-12">
+                            <h3 className="text-xl font-bold text-slate-700 mb-2">🌿 ຜັງຕົ້ນໄມ້ຄອບຄົວ</h3>
+                            <p className="text-slate-500">ສະມາຊິກທັງໝົດ {members.length} ຄົນໃນລະບົບ</p>
+                        </div>
+                    )}
                 </div>
             );
         }
