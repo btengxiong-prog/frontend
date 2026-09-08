@@ -217,6 +217,7 @@
         };
 
         function App() {
+          const [imagePreview, setImagePreview] = useState(null);
           const [lang, setLang] = useState('lao');
           const t = translations[lang] || translations.lao;
 
@@ -326,11 +327,40 @@
               setUser(null); 
           };
 
-          const handleFileChange = (e) => { const file = e.target.files[0]; if (file) setSelectedFile(file); };
+        // ໃຊ້ handleFileChange ອັນດຽວ (ອັນໃໝ່)
+          const handleFileChange = (e) => { 
+              const file = e.target.files[0]; 
+              if (file) {
+                  setSelectedFile(file); 
+                  setImagePreview(URL.createObjectURL(file)); // ສ້າງຮູບຕົວຢ່າງ
+              }
+          };
+
+          // ຟັງຊັນໃໝ່: ຈັບຄ່າເມື່ອຜູ້ໃຊ້ກົດ Ctrl+V
+          const handlePaste = (e) => {
+              const items = e.clipboardData?.items;
+              if (!items) return;
+
+              for (let i = 0; i < items.length; i++) {
+                  if (items[i].type.indexOf('image') !== -1) {
+                      const file = items[i].getAsFile();
+                      if (file) {
+                          setSelectedFile(file);
+                          setImagePreview(URL.createObjectURL(file)); // ສ້າງຮູບຕົວຢ່າງ
+                      }
+                      break; // ເອົາແຕ່ຮູບທຳອິດທີ່ເຈິ
+                  }
+              }
+          };
 
           const handleEdit = (member) => {
             if (user.role !== 'ADMIN') { showAlert('ສິດ USER ບໍ່ສາມາດແກ້ໄຂຂໍ້ມູນໄດ້'); return; }
-            setEditingId(member.id); setSelectedFile(null);
+            setEditingId(member.id); 
+            setSelectedFile(null);
+            
+            // ຕ້ອງເພີ່ມແຖວນີ້ ເພື່ອໃຫ້ຕອນກົດ "ແກ້ໄຂ" ມັນດຶງຮູບເກົ່າມາສະແດງນຳ
+            setImagePreview(member.photo_url || null); 
+
             let fDate = member.birth_date || '';
             if (/^\d{4}-01-01$/.test(fDate)) fDate = fDate.split('-')[0];
             else if (/^\d{4}-\d{2}-\d{2}$/.test(fDate)) { const [y, m, d] = fDate.split('-'); fDate = `${parseInt(d, 10)}/${parseInt(m, 10)}/${y}`; }
@@ -732,7 +762,74 @@
                         </select>
                       </div>
 
-                      <div style={{ gridColumn: 'span 2' }}><label style={labelStyle}>{t.selectPhoto}:</label><input type="file" accept="image/*" onChange={handleFileChange} style={inputStyle} /></div>
+                      <div style={{ gridColumn: 'span 2' }}>
+                          <label style={labelStyle}>ເລືອກຮູບພາບ (ຄລິກເພື່ອອັບໂຫຼດ ຫຼື ກົດ Ctrl+V ເພື່ອວາງຮູບ):</label>
+                          
+                          <div 
+                              tabIndex="0" 
+                              onPaste={handlePaste}
+                              onClick={() => document.getElementById('main-file-upload').click()}
+                              style={{
+                                  border: '2px dashed #94a3b8',
+                                  borderRadius: '8px',
+                                  padding: '20px',
+                                  textAlign: 'center',
+                                  background: imagePreview ? '#ffffff' : '#f8fafc',
+                                  cursor: 'pointer',
+                                  outline: 'none',
+                                  position: 'relative',
+                                  transition: 'all 0.3s'
+                              }}
+                              onFocus={(e) => e.target.style.borderColor = '#0284c7'}
+                              onBlur={(e) => e.target.style.borderColor = '#94a3b8'}
+                          >
+                              <input 
+                                  id="main-file-upload"
+                                  type="file" 
+                                  accept="image/*" 
+                                  onChange={handleFileChange} 
+                                  style={{ display: 'none' }} 
+                              />
+                              
+                              {imagePreview ? (
+                                  <div style={{ position: 'relative', display: 'inline-block' }}>
+                                      <img src={imagePreview} alt="Preview" style={{ maxHeight: '180px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                                      <button 
+                                          type="button"
+                                          onClick={(e) => {
+                                              e.stopPropagation(); // ປ້ອງກັນບໍ່ໃຫ້ມັນໄປເປີດໜ້າຕ່າງເລືອກໄຟລ໌
+                                              setSelectedFile(null);
+                                              setImagePreview(null);
+                                              setFormData({...formData, photo_url: ''}); // ລຶບຮູບເກົ່າອອກນຳຖ້າມີ
+                                          }}
+                                          style={{
+                                              position: 'absolute',
+                                              top: '-10px',
+                                              right: '-10px',
+                                              background: '#ef4444',
+                                              color: 'white',
+                                              border: 'none',
+                                              borderRadius: '50%',
+                                              width: '28px',
+                                              height: '28px',
+                                              cursor: 'pointer',
+                                              fontWeight: 'bold',
+                                              boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                          }}
+                                          title="ລຶບຮູບນີ້"
+                                      >
+                                          ✕
+                                      </button>
+                                  </div>
+                              ) : (
+                                  <div style={{ color: '#64748b', pointerEvents: 'none' }}>
+                                      <div style={{ fontSize: '30px', marginBottom: '8px' }}>📸</div>
+                                      <div style={{ fontSize: '15px' }}>ຄລິກກ່ອງນີ້ເພື່ອ <strong>ເລືອກຮູບ</strong> ເອງ</div>
+                                      <div style={{ fontSize: '14px', marginTop: '4px' }}>ຫຼື ກົດ <strong>Ctrl + V</strong> ເພື່ອວາງຮູບທີ່ກ໋ອບປີ້ມາ</div>
+                                  </div>
+                              )}
+                          </div>
+                      </div>
                       <div style={{ gridColumn: 'span 2' }}><label style={labelStyle}>{t.bio}</label><textarea value={formData.bio} onChange={e => setFormData({...formData, bio: e.target.value})} style={{ ...inputStyle, height: '60px' }}></textarea></div>
                       
                       <div style={{ gridColumn: 'span 2', textAlign: 'center' }}>
