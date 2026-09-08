@@ -326,35 +326,7 @@
               setUser(null); 
           };
 
-          // ຟັງຊັນຈັດການເມື່ອມີການເລືອກໄຟລ໌ຜ່ານປຸ່ມ Choose File
-          const handleFileChange = async (e) => {
-            const file = e.target.files[0];
-            if (file) {
-              const b64 = await processImage(file);
-              setSelectedFile(file);
-              setFormData(prev => ({ ...prev, photo_url: b64 }));
-            }
-          };
-
-          // ຟັງຊັນຈັດການເມື່ອກົດ Ctrl + V (Paste) ຫຼັງຈາກ Shift+Win+S
-          const handlePasteImage = async (e) => {
-            const items = (e.clipboardData || e.originalEvent?.clipboardData)?.items;
-            if (!items) return;
-
-            for (let index = 0; index < items.length; index++) {
-              const item = items[index];
-              if (item.type.indexOf('image') !== -1) {
-                e.preventDefault();
-                const file = item.getAsFile();
-                if (file) {
-                  const b64 = await processImage(file);
-                  setSelectedFile(file);
-                  setFormData(prev => ({ ...prev, photo_url: b64 }));
-                }
-                break;
-              }
-            }
-          };
+          const handleFileChange = (e) => { const file = e.target.files[0]; if (file) setSelectedFile(file); };
 
           const handleEdit = (member) => {
             if (user.role !== 'ADMIN') { showAlert('ສິດ USER ບໍ່ສາມາດແກ້ໄຂຂໍ້ມູນໄດ້'); return; }
@@ -760,92 +732,7 @@
                         </select>
                       </div>
 
-                      <div style={{ gridColumn: 'span 2' }}>
-                        <label style={labelStyle}>📷 {t.selectPhoto} (ເລືອກໄຟລ໌ ຫຼື ກົດ Ctrl+V ເພື່ອວາງຮູບ):</label>
-                        <div 
-                          tabIndex="0"
-                          onPaste={handlePasteImage}
-                          style={{
-                            border: '2px dashed #94a3b8',
-                            borderRadius: '10px',
-                            padding: '16px',
-                            backgroundColor: '#f8fafc',
-                            textAlign: 'center',
-                            cursor: 'pointer',
-                            outline: 'none',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '10px'
-                          }}
-                          onFocus={(e) => e.currentTarget.style.borderColor = '#0284c7'}
-                          onBlur={(e) => e.currentTarget.style.borderColor = '#94a3b8'}
-                        >
-                          {formData.photo_url ? (
-                            <div style={{ position: 'relative', display: 'inline-block' }}>
-                              <img 
-                                src={formData.photo_url} 
-                                alt="Preview" 
-                                style={{ 
-                                  width: '120px', 
-                                  height: '140px', 
-                                  objectFit: 'cover', 
-                                  borderRadius: '8px', 
-                                  border: '2px solid #0284c7',
-                                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)' 
-                                }} 
-                              />
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedFile(null);
-                                  setFormData({ ...formData, photo_url: '' });
-                                }}
-                                style={{
-                                  position: 'absolute',
-                                  top: '-8px',
-                                  right: '-8px',
-                                  background: '#ef4444',
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: '50%',
-                                  width: '24px',
-                                  height: '24px',
-                                  cursor: 'pointer',
-                                  fontWeight: 'bold',
-                                  fontSize: '12px',
-                                  lineHeight: '24px',
-                                  textAlign: 'center',
-                                  padding: 0
-                                }}
-                                title="ລຶບຮູບ"
-                              >
-                                ✕
-                              </button>
-                            </div>
-                          ) : (
-                            <div style={{ color: '#64748b', fontSize: '14px' }}>
-                              <p style={{ margin: '0 0 6px 0', fontWeight: 'bold' }}>
-                                📋 ຄລິກໃສ່ກ່ອງນີ້ ແລ້ວກົດ <span style={{ color: '#0284c7', background: '#e0f2fe', padding: '2px 8px', borderRadius: '4px' }}>Ctrl + V</span> ເພື່ອວາງຮູບທີ່ແຄບມາ
-                              </p>
-                              <span style={{ fontSize: '12px' }}>ຫຼື ເລືອກອັບໂຫຼດໄຟລ໌ຈາກເຄື່ອງດ້ານລຸ່ມ:</span>
-                            </div>
-                          )}
-
-                          <input 
-                            type="file" 
-                            accept="image/*" 
-                            onChange={handleFileChange} 
-                            style={{
-                              fontSize: '13px',
-                              color: '#475569',
-                              cursor: 'pointer'
-                            }} 
-                          />
-                        </div>
-                      </div>
+                      <div style={{ gridColumn: 'span 2' }}><label style={labelStyle}>{t.selectPhoto}:</label><input type="file" accept="image/*" onChange={handleFileChange} style={inputStyle} /></div>
                       <div style={{ gridColumn: 'span 2' }}><label style={labelStyle}>{t.bio}</label><textarea value={formData.bio} onChange={e => setFormData({...formData, bio: e.target.value})} style={{ ...inputStyle, height: '60px' }}></textarea></div>
                       
                       <div style={{ gridColumn: 'span 2', textAlign: 'center' }}>
