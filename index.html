@@ -647,32 +647,37 @@
                       <div><label style={labelStyle}>{t.gender}</label><select value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value})} style={inputStyle}><option value="Male">{t.male}</option><option value="Female">{t.female}</option></select></div>
                       <div><label style={labelStyle}>{t.birthDate}</label><input type="text" placeholder="15/3/1973 ຫຼື 1973" value={formData.birth_date} onChange={e => setFormData({...formData, birth_date: e.target.value})} style={inputStyle} /></div>
                       
-                  {/* ໂຄດໃໝ່ທີ່ປັບປຸງແລ້ວ */}
-                  <div style={{ gridColumn: 'span 2' }}><label style={labelStyle}>💍 {t.spouse}:</label>
-                    <select value={formData.spouse_id} onChange={e => setFormData({...formData, spouse_id: e.target.value})} style={inputStyle}>
-                      <option value="">{t.selectSpouse}</option>
-                      {members.filter(m => String(m.id) !== String(editingId)).map(m => {
-                        let displayText = '';
+                      <div style={{ gridColumn: 'span 2' }}><label style={labelStyle}>💍 {t.spouse}:</label>
+                        <select value={formData.spouse_id} onChange={e => setFormData({...formData, spouse_id: e.target.value})} style={inputStyle}>
+                          <option value="">{t.selectSpouse}</option>
+                          {members.filter(m => String(m.id) !== String(editingId)).map(m => {
+                            let displayText = '';
+                            const father = members.find(f => String(f.id) === String(m.father_id));
 
-                        if (m.gender === 'Male') {
-                          // ຖ້າເປັນເພດຊາຍ (ຜົວ): ສະແດງຊື່ + (ຊື່ພໍ່)
-                          const father = members.find(f => String(f.id) === String(m.father_id));
-                          const fatherName = father ? father.first_name : 'ບໍ່ມີຂໍ້ມູນພໍ່';
-                          displayText = `${m.first_name} (${fatherName})`;
-                        } else {
-                          // ຖ້າເປັນເພດຍິງ (ເມຍ): ສະແດງ ຊື່ + ນາມສະກຸນ + ລຸ້ນ (P.X)
-                          const gen = calculateGeneration(m, members);
-                          displayText = `${m.first_name} ${m.last_name} (P.${gen})`;
-                        }
+                            if (m.gender === 'Male') {
+                              // ເພດຊາຍ: ສະແດງ ຊື່ + (ຊື່ພໍ່)
+                              const fatherName = father ? father.first_name : 'ບໍ່ມີຂໍ້ມູນພໍ່';
+                              displayText = `${m.first_name} (${fatherName})`;
+                            } else {
+                              // ເພດຍິງ:
+                              if (father) {
+                                // ຖ້າມີພໍ່ (ລູກສາວໃນຕະກຸນ): ສະແດງ ຊື່ + (ຊື່ພໍ່)
+                                displayText = `${m.first_name} (${father.first_name})`;
+                              } else {
+                                // ຖ້າບໍ່ມີພໍ່ (ໃພ້/ເມຍ): ສະແດງ ຊື່ + ນາມສະກຸນ + (P.X)
+                                const gen = calculateGeneration(m, members);
+                                displayText = `${m.first_name} ${m.last_name || ''} (P.${gen})`.trim();
+                              }
+                            }
 
-                        return (
-                          <option key={m.id} value={m.id}>
-                            {displayText}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
+                            return (
+                              <option key={m.id} value={m.id}>
+                                {displayText}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </div>
 
                       <div><label style={labelStyle}>{t.father}:</label>
                         <select value={formData.father_id} onChange={e => setFormData({...formData, father_id: e.target.value})} style={inputStyle}>
