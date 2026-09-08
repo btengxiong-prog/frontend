@@ -368,7 +368,12 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
           };
 
-          const handleCancelEdit = () => { setEditingId(null); setSelectedFile(null); setFormData(initialFormState); };
+          const handleCancelEdit = () => { 
+              setEditingId(null); 
+              setSelectedFile(null); 
+              setImagePreview(null); // <--- ເພີ່ມແຖວນີ້ເພື່ອລຶບຮູບຕົວຢ່າງອອກ
+              setFormData(initialFormState); 
+          };
 
           const handleDelete = (id, name) => {
             if (user.role !== 'ADMIN') { showAlert('ສິດ USER ບໍ່ສາມາດລຶບຂໍ້ມູນໄດ້'); return; }
