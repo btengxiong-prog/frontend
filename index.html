@@ -768,22 +768,23 @@
                       </div>
 
                       <div style={{ gridColumn: 'span 2' }}>
-                          <label style={labelStyle}>ເລືອກຮູບພາບ (ຄລິກເພື່ອອັບໂຫຼດ ຫຼື ກົດ Ctrl+V ເພື່ອວາງຮູບ):</label>
+                          <label style={labelStyle}>ເລືອກຮູບພາບ:</label>
                           
                           <div 
                               tabIndex="0" 
                               onPaste={handlePaste}
                               onClick={() => document.getElementById('main-file-upload').click()}
                               style={{
-                                  border: '2px dashed #94a3b8',
-                                  borderRadius: '8px',
-                                  padding: '20px',
-                                  textAlign: 'center',
-                                  background: imagePreview ? '#ffffff' : '#f8fafc',
+                                  border: '1px dashed #94a3b8', // ເສັ້ນປະນ້ອຍລົງ
+                                  borderRadius: '6px',
+                                  padding: '6px 12px', // ຫຼຸດຂະໜາດຄວາມສູງລົງໃຫ້ເທົ່າປ໋ອກອື່ນ
+                                  background: imagePreview ? '#f0f9ff' : '#f8fafc',
                                   cursor: 'pointer',
                                   outline: 'none',
-                                  position: 'relative',
-                                  transition: 'all 0.3s'
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  minHeight: '38px',
+                                  transition: 'all 0.2s'
                               }}
                               onFocus={(e) => e.target.style.borderColor = '#0284c7'}
                               onBlur={(e) => e.target.style.borderColor = '#94a3b8'}
@@ -797,44 +798,43 @@
                               />
                               
                               {imagePreview ? (
-                                  <div style={{ position: 'relative', display: 'inline-block' }}>
-                                      <img src={imagePreview} alt="Preview" style={{ maxHeight: '180px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                                  <div style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '10px' }}>
+                                      <img src={imagePreview} alt="Preview" style={{ height: '28px', width: '28px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                                      <span style={{ fontSize: '14px', color: '#0369a1', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                          ✅ ມີຮູບພາບແລ້ວ (ຄລິກ ຫຼື ວາງຮູບໃໝ່ເພື່ອປ່ຽນ)
+                                      </span>
                                       <button 
                                           type="button"
                                           onClick={(e) => {
-                                              e.stopPropagation(); // ປ້ອງກັນບໍ່ໃຫ້ມັນໄປເປີດໜ້າຕ່າງເລືອກໄຟລ໌
+                                              e.stopPropagation();
                                               setSelectedFile(null);
                                               setImagePreview(null);
-                                              setFormData({...formData, photo_url: ''}); // ລຶບຮູບເກົ່າອອກນຳຖ້າມີ
+                                              setFormData({...formData, photo_url: ''});
                                           }}
                                           style={{
-                                              position: 'absolute',
-                                              top: '-10px',
-                                              right: '-10px',
                                               background: '#ef4444',
                                               color: 'white',
                                               border: 'none',
-                                              borderRadius: '50%',
-                                              width: '28px',
-                                              height: '28px',
+                                              borderRadius: '4px',
+                                              padding: '4px 10px',
                                               cursor: 'pointer',
-                                              fontWeight: 'bold',
-                                              boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                              fontSize: '12px',
+                                              fontWeight: 'bold'
                                           }}
                                           title="ລຶບຮູບນີ້"
                                       >
-                                          ✕
+                                          ✕ ລຶບ
                                       </button>
                                   </div>
                               ) : (
-                                  <div style={{ color: '#64748b', pointerEvents: 'none' }}>
-                                      <div style={{ fontSize: '30px', marginBottom: '8px' }}>📸</div>
-                                      <div style={{ fontSize: '15px' }}>ຄລິກກ່ອງນີ້ເພື່ອ <strong>ເລືອກຮູບ</strong> ເອງ</div>
-                                      <div style={{ fontSize: '14px', marginTop: '4px' }}>ຫຼື ກົດ <strong>Ctrl + V</strong> ເພື່ອວາງຮູບທີ່ກ໋ອບປີ້ມາ</div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '14px', width: '100%' }}>
+                                      <span style={{ fontSize: '16px' }}>📸</span>
+                                      <span>ຄລິກເພື່ອກົດເລືອກ ຫຼື ກົດ <strong>Ctrl + V</strong> ເພື່ອວາງຮູບໃສ່ບ່ອນນີ້</span>
                                   </div>
                               )}
                           </div>
                       </div>
+
                       <div style={{ gridColumn: 'span 2' }}><label style={labelStyle}>{t.bio}</label><textarea value={formData.bio} onChange={e => setFormData({...formData, bio: e.target.value})} style={{ ...inputStyle, height: '60px' }}></textarea></div>
                       
                       <div style={{ gridColumn: 'span 2', textAlign: 'center' }}>
