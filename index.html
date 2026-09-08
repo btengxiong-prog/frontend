@@ -94,23 +94,19 @@
         };
 
         const calculateGeneration = (currentMember, membersList, visited = new Set()) => {
-          // ໃຊ້ String() ເພື່ອປ້ອງກັນ error ໃນ visited
-          if (!currentMember || visited.has(String(currentMember.id))) return 1;
-          visited.add(String(currentMember.id));
+          if (!currentMember || visited.has(currentMember.id)) return 1;
+          visited.add(currentMember.id);
 
-          // ເພີ່ມ String() ເຂົ້າໃນການປຽບທຽບ ID ເພື່ອໃຫ້ຊອກຫາພໍ່ ແລະ ແມ່ເຈິສະເໝີ
-          const father = membersList.find(m => String(m.id) === String(currentMember.father_id));
-          const mother = membersList.find(m => String(m.id) === String(currentMember.mother_id));
+          const father = membersList.find(m => m.id === currentMember.father_id);
+          const mother = membersList.find(m => m.id === currentMember.mother_id);
 
           if (father) return calculateGeneration(father, membersList, visited) + 1;
           if (mother) return calculateGeneration(mother, membersList, visited) + 1;
 
-          // ເພີ່ມ String() ເຂົ້າໃນການປຽບທຽບຄູ່ສົມລົດ
           const spouse = membersList.find(m => 
-            (String(m.id) === String(currentMember.spouse_id) || String(currentMember.id) === String(m.spouse_id)) && String(m.id) !== String(currentMember.id)
+            (m.id === currentMember.spouse_id || currentMember.id === m.spouse_id) && m.id !== currentMember.id
           );
-          
-          if (spouse && !visited.has(String(spouse.id))) {
+          if (spouse && !visited.has(spouse.id)) {
             return calculateGeneration(spouse, membersList, visited);
           }
 
@@ -650,85 +646,21 @@
                       <div style={{ gridColumn: 'span 2' }}><label style={labelStyle}>💍 {t.spouse}:</label>
                         <select value={formData.spouse_id} onChange={e => setFormData({...formData, spouse_id: e.target.value})} style={inputStyle}>
                           <option value="">{t.selectSpouse}</option>
-                          {members.filter(m => String(m.id) !== String(editingId)).map(m => {
-                            let displayText = '';
-                            const father = members.find(f => String(f.id) === String(m.father_id));
-
-                            if (m.gender === 'Male') {
-                              // ເພດຊາຍ: ສະແດງ ຊື່ + (ຊື່ພໍ່)
-                              const fatherName = father ? father.first_name : 'ບໍ່ມີຂໍ້ມູນພໍ່';
-                              displayText = `${m.first_name} (${fatherName})`;
-                            } else {
-                              // ເພດຍິງ:
-                              if (father) {
-                                // ຖ້າມີພໍ່ (ລູກສາວໃນຕະກຸນ): ສະແດງ ຊື່ + (ຊື່ພໍ່)
-                                displayText = `${m.first_name} (${father.first_name})`;
-                              } else {
-                                // ຖ້າບໍ່ມີພໍ່ (ໃພ້/ເມຍ): ສະແດງ ຊື່ + ນາມສະກຸນ + (P.X)
-                                const gen = calculateGeneration(m, members);
-                                displayText = `${m.first_name} ${m.last_name || ''} (P.${gen})`.trim();
-                              }
-                            }
-
-                            return (
-                              <option key={m.id} value={m.id}>
-                                {displayText}
-                              </option>
-                            );
-                          })}
+                          {members.filter(m => String(m.id) !== String(editingId)).map(m => <option key={m.id} value={m.id}>{m.first_name} {m.last_name}</option>)}
                         </select>
                       </div>
 
-                      <div>
-                        <label style={labelStyle}>{t.father}:</label>
-                        <select 
-                          value={formData.father_id} 
-                          onChange={e => setFormData({...formData, father_id: e.target.value})} 
-                          style={inputStyle}
-                        >
+                      <div><label style={labelStyle}>{t.father}:</label>
+                        <select value={formData.father_id} onChange={e => setFormData({...formData, father_id: e.target.value})} style={inputStyle}>
                           <option value="">{t.selectFather}</option>
-                          {members
-                            .filter(m => m.gender === 'Male' && String(m.id) !== String(editingId))
-                            .map(m => {
-                              // ຊອກຫາຂໍ້ມູນພໍ່ຂອງສະມາຊິກຄົນນີ້
-                              const fatherOfFather = members.find(f => String(f.id) === String(m.father_id));
-                              const fatherName = fatherOfFather ? fatherOfFather.first_name : 'ບໍ່ມີຂໍ້ມູນພໍ່';
-                              
-                              return (
-                                <option key={m.id} value={m.id}>
-                                  {m.first_name} ({fatherName})
-                                </option>
-                              );
-                            })}
+                          {members.filter(m => m.gender === 'Male' && String(m.id) !== String(editingId)).map(m => <option key={m.id} value={m.id}>{m.first_name}</option>)}
                         </select>
                       </div>
 
-                      <div>
-                        <label style={labelStyle}>{t.mother}:</label>
-                        <select 
-                          value={formData.mother_id} 
-                          onChange={e => setFormData({...formData, mother_id: e.target.value})} 
-                          style={inputStyle}
-                        >
+                      <div><label style={labelStyle}>{t.mother}:</label>
+                        <select value={formData.mother_id} onChange={e => setFormData({...formData, mother_id: e.target.value})} style={inputStyle}>
                           <option value="">{t.selectMother}</option>
-                          {members
-                            .filter(m => m.gender === 'Female' && String(m.id) !== String(editingId))
-                            .map(m => {
-                              const fatherOfMother = members.find(f => String(f.id) === String(m.father_id));
-                              let displayText = '';
-                              if (fatherOfMother) {
-                                displayText = `${m.first_name} (${fatherOfMother.first_name})`;
-                              } else {
-                                const gen = calculateGeneration(m, members);
-                                displayText = `${m.first_name} ${m.last_name || ''} (P.${gen})`.trim();
-                              }
-
-                              return (
-                                <option key={m.id} value={m.id}>
-                                  {displayText}
-                                </option>
-                              );
-                            })}
+                          {members.filter(m => m.gender === 'Female' && String(m.id) !== String(editingId)).map(m => <option key={m.id} value={m.id}>{m.first_name}</option>)}
                         </select>
                       </div>
 
