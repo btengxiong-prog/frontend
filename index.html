@@ -679,17 +679,56 @@
                         </select>
                       </div>
 
-                      <div><label style={labelStyle}>{t.father}:</label>
-                        <select value={formData.father_id} onChange={e => setFormData({...formData, father_id: e.target.value})} style={inputStyle}>
+                      <div>
+                        <label style={labelStyle}>{t.father}:</label>
+                        <select 
+                          value={formData.father_id} 
+                          onChange={e => setFormData({...formData, father_id: e.target.value})} 
+                          style={inputStyle}
+                        >
                           <option value="">{t.selectFather}</option>
-                          {members.filter(m => m.gender === 'Male' && String(m.id) !== String(editingId)).map(m => <option key={m.id} value={m.id}>{m.first_name}</option>)}
+                          {members
+                            .filter(m => m.gender === 'Male' && String(m.id) !== String(editingId))
+                            .map(m => {
+                              // ຊອກຫາຂໍ້ມູນພໍ່ຂອງສະມາຊິກຄົນນີ້
+                              const fatherOfFather = members.find(f => String(f.id) === String(m.father_id));
+                              const fatherName = fatherOfFather ? fatherOfFather.first_name : 'ບໍ່ມີຂໍ້ມູນພໍ່';
+                              
+                              return (
+                                <option key={m.id} value={m.id}>
+                                  {m.first_name} ({fatherName})
+                                </option>
+                              );
+                            })}
                         </select>
                       </div>
 
-                      <div><label style={labelStyle}>{t.mother}:</label>
-                        <select value={formData.mother_id} onChange={e => setFormData({...formData, mother_id: e.target.value})} style={inputStyle}>
+                      <div>
+                        <label style={labelStyle}>{t.mother}:</label>
+                        <select 
+                          value={formData.mother_id} 
+                          onChange={e => setFormData({...formData, mother_id: e.target.value})} 
+                          style={inputStyle}
+                        >
                           <option value="">{t.selectMother}</option>
-                          {members.filter(m => m.gender === 'Female' && String(m.id) !== String(editingId)).map(m => <option key={m.id} value={m.id}>{m.first_name}</option>)}
+                          {members
+                            .filter(m => m.gender === 'Female' && String(m.id) !== String(editingId))
+                            .map(m => {
+                              const fatherOfMother = members.find(f => String(f.id) === String(m.father_id));
+                              let displayText = '';
+                              if (fatherOfMother) {
+                                displayText = `${m.first_name} (${fatherOfMother.first_name})`;
+                              } else {
+                                const gen = calculateGeneration(m, members);
+                                displayText = `${m.first_name} ${m.last_name || ''} (P.${gen})`.trim();
+                              }
+
+                              return (
+                                <option key={m.id} value={m.id}>
+                                  {displayText}
+                                </option>
+                              );
+                            })}
                         </select>
                       </div>
 
