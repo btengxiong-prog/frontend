@@ -1,3 +1,23 @@
+https://btengxiong-prog.github.io/frontend/
+XIONG_ADMIN
+XY@212807
+
+XIONG_XY
+XY212807
+-------------------------------------------------------------------------------------
+git add -A
+git commit -m "update family tree standalone ui"
+git push origin main
+-------------------------------------------------------------------------------------
+https://console.cloudinary.com/app/c-b44aef73f93ec7cbed9d127d397e5b/image/getting-started
+https://github.com/btengxiong-prog/family-tree-backend/blob/main/package.json
+https://console.firebase.google.com/u/0/project/posxiong-pos/firestore/databases/-default-/data
+-------------------------------------------------------------------------------------------------------
+https://console.cloudinary.com
+https://github.com
+https://dashboard.render.com
+https://console.neon.tech/app/
+--------------------------------------------------------------------------------------------------
 <!DOCTYPE html>
 <html lang="lo" translate="no">
 <head>
@@ -94,23 +114,19 @@
         };
 
         const calculateGeneration = (currentMember, membersList, visited = new Set()) => {
-          // ໃຊ້ String() ເພື່ອປ້ອງກັນ error ໃນ visited
-          if (!currentMember || visited.has(String(currentMember.id))) return 1;
-          visited.add(String(currentMember.id));
+          if (!currentMember || visited.has(currentMember.id)) return 1;
+          visited.add(currentMember.id);
 
-          // ເພີ່ມ String() ເຂົ້າໃນການປຽບທຽບ ID ເພື່ອໃຫ້ຊອກຫາພໍ່ ແລະ ແມ່ເຈິສະເໝີ
-          const father = membersList.find(m => String(m.id) === String(currentMember.father_id));
-          const mother = membersList.find(m => String(m.id) === String(currentMember.mother_id));
+          const father = membersList.find(m => m.id === currentMember.father_id);
+          const mother = membersList.find(m => m.id === currentMember.mother_id);
 
           if (father) return calculateGeneration(father, membersList, visited) + 1;
           if (mother) return calculateGeneration(mother, membersList, visited) + 1;
 
-          // ເພີ່ມ String() ເຂົ້າໃນການປຽບທຽບຄູ່ສົມລົດ
           const spouse = membersList.find(m => 
-            (String(m.id) === String(currentMember.spouse_id) || String(currentMember.id) === String(m.spouse_id)) && String(m.id) !== String(currentMember.id)
+            (m.id === currentMember.spouse_id || currentMember.id === m.spouse_id) && m.id !== currentMember.id
           );
-          
-          if (spouse && !visited.has(String(spouse.id))) {
+          if (spouse && !visited.has(spouse.id)) {
             return calculateGeneration(spouse, membersList, visited);
           }
 
@@ -647,32 +663,12 @@
                       <div><label style={labelStyle}>{t.gender}</label><select value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value})} style={inputStyle}><option value="Male">{t.male}</option><option value="Female">{t.female}</option></select></div>
                       <div><label style={labelStyle}>{t.birthDate}</label><input type="text" placeholder="15/3/1973 ຫຼື 1973" value={formData.birth_date} onChange={e => setFormData({...formData, birth_date: e.target.value})} style={inputStyle} /></div>
                       
-                  {/* ໂຄດໃໝ່ທີ່ປັບປຸງແລ້ວ */}
-                  <div style={{ gridColumn: 'span 2' }}><label style={labelStyle}>💍 {t.spouse}:</label>
-                    <select value={formData.spouse_id} onChange={e => setFormData({...formData, spouse_id: e.target.value})} style={inputStyle}>
-                      <option value="">{t.selectSpouse}</option>
-                      {members.filter(m => String(m.id) !== String(editingId)).map(m => {
-                        let displayText = '';
-
-                        if (m.gender === 'Male') {
-                          // ຖ້າເປັນເພດຊາຍ (ຜົວ): ສະແດງຊື່ + (ຊື່ພໍ່)
-                          const father = members.find(f => String(f.id) === String(m.father_id));
-                          const fatherName = father ? father.first_name : 'ບໍ່ມີຂໍ້ມູນພໍ່';
-                          displayText = `${m.first_name} (${fatherName})`;
-                        } else {
-                          // ຖ້າເປັນເພດຍິງ (ເມຍ): ສະແດງ ຊື່ + ນາມສະກຸນ + ລຸ້ນ (P.X)
-                          const gen = calculateGeneration(m, members);
-                          displayText = `${m.first_name} ${m.last_name} (P.${gen})`;
-                        }
-
-                        return (
-                          <option key={m.id} value={m.id}>
-                            {displayText}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
+                      <div style={{ gridColumn: 'span 2' }}><label style={labelStyle}>💍 {t.spouse}:</label>
+                        <select value={formData.spouse_id} onChange={e => setFormData({...formData, spouse_id: e.target.value})} style={inputStyle}>
+                          <option value="">{t.selectSpouse}</option>
+                          {members.filter(m => String(m.id) !== String(editingId)).map(m => <option key={m.id} value={m.id}>{m.first_name} {m.last_name}</option>)}
+                        </select>
+                      </div>
 
                       <div><label style={labelStyle}>{t.father}:</label>
                         <select value={formData.father_id} onChange={e => setFormData({...formData, father_id: e.target.value})} style={inputStyle}>
@@ -744,3 +740,19 @@
     </script>
 </body>
 </html>
+-----------------------------------------------------------
+git add -A
+git commit -m "update family tree standalone ui"
+git push origin main
+------------------------------------------------------
+ນີ້ເປັນໂຄດຫຼັກ ຊ່ວຍຮັກສາ ແລະ ຈຳໄວ້ ເພື່ອປັບປຸງຕໍ່ໄປ
+index.html
+
+XIONG_ADMIN
+XY@212807
+
+XIONG_XY
+XY212807
+------------------------------------------------------------
+ໝາຍເຫດ: ປັບປຸງ function ໃດ ໃຫ້ທ່ານຂຽນໃຫ້ຄົບທັງໝົດ function ນັ້ນ 100% ເພື່ອຈະໄດ້ກ໋ອບປີໝົດ function ໄປວາງທັບໃຊ້ງານເລີຍ ບໍ່ໃຫ້ແປງໝົດໂຄດ ຢ້ານຜິດພາດ
+ລุยເລີຍ ລະມັດລະວັງຢ่าให้ข้อมูลหาย
